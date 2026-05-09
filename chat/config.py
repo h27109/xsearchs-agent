@@ -122,12 +122,12 @@ def load_config() -> AppConfig:
     for key, val in raw_models.items():
         models[key] = _parse_model_config(key, val)
 
-    sqlite = raw.get("sqlite")
-    if not sqlite or "url" not in sqlite:
-        raise ValueError("config.yaml 缺少 sqlite.url 配置")
+    sqlite = raw.get("sqlite") or {}
+    db_name = sqlite.get("db", "memory.db")
+    sqlite_url = f"sqlite+aiosqlite:///{data_dir / db_name}"
 
     return AppConfig(
         models=models,
         mcp=raw.get("MCP", {}),
-        sqlite_url=sqlite["url"],
+        sqlite_url=sqlite_url,
     )

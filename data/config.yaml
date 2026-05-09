@@ -24,7 +24,7 @@ models:
     max_iters: 90
 
 sqlite:
-  url: "sqlite+aiosqlite:////data/home/jlpayops/code/third/xsearchs_agent/data/memory.db"
+  db: "memory.db"
 
 MCP: 
   清算接口: 
