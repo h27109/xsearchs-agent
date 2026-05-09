@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -15,6 +16,42 @@ def get_data_dir() -> Path:
         return Path(env)
     return _PROJECT_ROOT / "data"
 
+
+def _load_env(data_dir: Path) -> dict[str, str]:
+    """从用户数据目录读取 .env 文件为 key=value 字典。"""
+    env_path = data_dir / ".env"
+    env_vars: dict[str, str] = {}
+    if not env_path.exists():
+        return env_vars
+    with open(env_path) as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            env_vars[key.strip()] = value.strip()
+    return env_vars
+
+
+def _resolve_env_vars(obj):
+    """递归遍历 dict/list/str，将 ${VAR} 占位符替换为 .env 中的值。"""
+    if isinstance(obj, str):
+        return re.sub(
+            r"\$\{(\w+)\}",
+            lambda m: _env_map.get(m.group(1), m.group(0)),
+            obj,
+        )
+    if isinstance(obj, dict):
+        return {k: _resolve_env_vars(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_resolve_env_vars(v) for v in obj]
+    return obj
+
+
+# 模块级变量，load_config() 时填充
+_env_map: dict[str, str] = {}
 
 _CONFIG_PATH = get_data_dir() / "config.yaml"
 
@@ -66,8 +103,17 @@ def _parse_model_config(provider_name: str, cfg: dict) -> ModelConfig:
 
 
 def load_config() -> AppConfig:
-    with open(_CONFIG_PATH) as f:
+    global _env_map
+
+    data_dir = get_data_dir()
+
+    # 1. 加载 .env
+    _env_map = _load_env(data_dir)
+
+    # 2. 加载 config.yaml 并替换 ${VAR}
+    with open(data_dir / "config.yaml") as f:
         raw = yaml.safe_load(f)
+    raw = _resolve_env_vars(raw)
 
     raw_models = raw.get("models")
     if not isinstance(raw_models, dict):

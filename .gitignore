@@ -34,3 +34,4 @@ web-ui/dist/
 # uv lock (optional, keep if team shares lockfile)
 # uv.lock
 data/*.db
+.env
