@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+
+# Playwright MCP cache
+.playwright-mcp/
+
+# SQLite databases (runtime data)
+data/memory.db
+
+# Runtime output
+nohup.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+web-ui/node_modules/
+web-ui/dist/
+
+# uv lock (optional, keep if team shares lockfile)
+# uv.lock
+data/*.db

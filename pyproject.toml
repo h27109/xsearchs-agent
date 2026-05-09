@@ -1,0 +1,17 @@
+[project]
+name = "xsearchs-agent"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "agentscope>=1.0.19.post1",
+    "agentscope-runtime>=1.1.5",
+    "fakeredis>=2.35.1",
+    "httpx[socks]>=0.28.1",
+    "pyyaml>=6.0",
+    "sqlalchemy>=2.0",
+    "aiosqlite>=0.20",
+]
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
