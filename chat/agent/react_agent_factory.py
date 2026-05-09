@@ -16,8 +16,8 @@ from agentscope.tool import (
     view_text_file,
 )
 
-from src.config import AppConfig, get_data_dir
-from src.agent.model_factory import create_formatter, create_model
+from chat.config import AppConfig, get_data_dir
+from chat.agent.model_factory import create_formatter, create_model
 
 _TEMPLATE_DIR = get_data_dir() / "templates"
 

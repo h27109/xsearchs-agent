@@ -7,9 +7,9 @@ from agentscope.session import RedisSession
 from agentscope_runtime.engine import AgentApp
 from agentscope_runtime.engine.schemas.agent_schemas import AgentRequest
 
-from src.config import load_config
-from src.agent.react_agent_factory import load_react_agent
-from src.session import load_messages, update_session_name
+from chat.config import load_config
+from chat.agent.react_agent_factory import load_react_agent
+from chat.session import load_messages, update_session_name
 
 DEFAULT_TEMPLATE = "simple-react-agent"
 

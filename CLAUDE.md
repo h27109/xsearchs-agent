@@ -16,7 +16,7 @@ xsearchs_agent/
 │   │   ├── simple-react-agent.md
 │   │   └── payment-system-architect.md
 │   └── memory.db               # SQLite（两后端共享）
-├── src/                        # 对话后端 :8090 — Agent 推理 + SSE 流式响应（只读 data/）
+├── chat/                       # 对话后端 :8090 — Agent 推理 + SSE 流式响应（只读 data/）
 │   ├── main.py                 # AgentApp 入口，/process 端点
 │   ├── config.py               # AppConfig / ModelConfig + get_data_dir()
 │   ├── agent/                  # Agent 工厂，读取 data/templates/
@@ -54,7 +54,7 @@ cd /data/home/jlpayops/code/third/xsearchs_agent
 export XSEARCHS_USER_DATA=/path/to/data
 
 # 对话后端
-source .venv/bin/activate && PYTHONPATH=. python src/main.py
+source .venv/bin/activate && PYTHONPATH=. python chat/main.py
 
 # 管理后端
 source .venv/bin/activate && PYTHONPATH=. python manage/main.py
@@ -74,7 +74,7 @@ cd web-ui && npm run dev
 | message_mark | msg_id, mark | |
 
 `manage/database.py` 的 `init_db()` 执行建表 + `INSERT OR IGNORE admin`，仅 manage 后端在启动时调用。
-`src/session/database.py` 的 `get_db()` 提供连接，两个后端共用。
+`chat/session/database.py` 的 `get_db()` 提供连接，两个后端共用。
 
 ## API
 
@@ -109,7 +109,7 @@ cd web-ui && npm run dev
 
 ## Key Pitfalls
 
-1. **data/ 目录是用户数据与代码的边界**：config.yaml、templates/、memory.db 都在 data/ 下。src/ 中的代码只读取它们，不修改。未来 manage/ 可提供编缉模板的能力。
+1. **data/ 目录是用户数据与代码的边界**：config.yaml、templates/、memory.db 都在 data/ 下。chat/ 中的代码只读取它们，不修改。未来 manage/ 可提供编缉模板的能力。
 2. **antd 必须 v5**，v6 与 @agentscope-ai/chat 不兼容
 3. **`BackendSessionApi.createSession()` 必须 mutate `session.id`** 注入 UUID，否则库 `setCurrentSessionId(undefined)` 导致 New Chat 无法切换
 4. **`getSession(undefined)` 必须返回空会话**，库初始化时会传 undefined

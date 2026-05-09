@@ -3,7 +3,7 @@ from __future__ import annotations
 from agentscope.formatter import AnthropicChatFormatter, DeepSeekChatFormatter, OpenAIChatFormatter
 from agentscope.model import AnthropicChatModel, OpenAIChatModel
 
-from src.config import ModelConfig
+from chat.config import ModelConfig
 
 _CLIENT_TYPES: dict[str, type] = {
     "anthropic": AnthropicChatModel,

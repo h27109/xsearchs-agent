@@ -4,7 +4,7 @@ import os
 
 import aiosqlite
 
-from src.config import get_data_dir
+from chat.config import get_data_dir
 
 _DB_PATH = str(get_data_dir() / "memory.db")
 
