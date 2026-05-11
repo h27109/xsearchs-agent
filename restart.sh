@@ -73,23 +73,26 @@ log "========== 重启 xsearchs-agent =========="
 kill_by_port 8090
 kill_by_port 8091
 kill_by_port 5173
+kill_by_port 5174
 
 sleep 1
 
 # 2) 启动 manage（管理后端 :8091）
 start_service "manage" 8091 \
-    "$VENV_PY -u manage/main.py"
+    "env PYTHONPATH=. $VENV_PY -u manage/main.py"
 
 # 3) 启动 chat（对话后端 :8090）
 start_service "chat" 8090 \
-    "$VENV_PY -u chat/main.py"
+    "env PYTHONPATH=. $VENV_PY -u chat/main.py"
 
-# 4) 启动 web-ui（前端 :5173）
-start_service "web-ui" 5173 \
-    "sh -c 'cd web-ui && npx vite --host 0.0.0.0'"
+# 4) 启动 web-ui-v2（前端 :5174）
+cd "$SCRIPT_DIR/web-ui-v2"
+start_service "web-ui" 5174 \
+    "npx vite --host 0.0.0.0"
+cd "$SCRIPT_DIR"
 
 log "========== 全部完成 =========="
 log "  chat   : http://0.0.0.0:8090"
 log "  manage : http://0.0.0.0:8091"
-log "  web-ui : http://0.0.0.0:5173"
+log "  web-ui : http://0.0.0.0:5174"
 log "  日志目录: $LOG_DIR/"

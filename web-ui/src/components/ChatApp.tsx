@@ -174,40 +174,44 @@ export default function ChatApp({ auth, onLogout }: ChatAppProps) {
   );
 
   const options = useMemo(
-    () => ({
-      api: {
-        baseURL: CHAT_URL,
-        token: auth.token,
-      },
-      theme: {
-        darkMode: true,
-        colorPrimary: "#615CED",
-        rightHeader,
-        leftHeader: {
-          logo: "https://img.alicdn.com/imgextra/i2/O1CN01lmoGYn1kjoXATy4PX_!!6000000004720-2-tps-200-200.png",
-          title: "XSearchs Agent",
+    () => {
+      console.log('[DEBUG] rightHeader:', typeof rightHeader, !!rightHeader, rightHeader);
+      return {
+        api: {
+          baseURL: CHAT_URL,
+          token: auth.token,
         },
-      },
-      welcome: {
-        greeting: "你好，有什么可以帮助你的?",
-        description:
-          "我是支付清算助手，可以帮你查询商户信息、交易对账、清算结算等业务。",
-        avatar:
-          "https://img.alicdn.com/imgextra/i2/O1CN01lmoGYn1kjoXATy4PX_!!6000000004720-2-tps-200-200.png",
-        prompts: [
-          { value: "你好" },
-          { value: "帮我查询商户信息" },
-          { value: "查询交易流水" },
-        ],
-      },
-      session: {
-        multiple: true,
-        api: sessionApi,
-      },
-    }),
-    [auth.token, sessionApi]
+        theme: {
+          darkMode: true,
+          colorPrimary: "#615CED",
+          rightHeader,
+          leftHeader: {
+            logo: "https://img.alicdn.com/imgextra/i2/O1CN01lmoGYn1kjoXATy4PX_!!6000000004720-2-tps-200-200.png",
+            title: "XSearchs Agent",
+          },
+        },
+        welcome: {
+          greeting: "你好，有什么可以帮助你的?",
+          description:
+            "我是支付清算助手，可以帮你查询商户信息、交易对账、清算结算等业务。",
+          avatar:
+            "https://img.alicdn.com/imgextra/i2/O1CN01lmoGYn1kjoXATy4PX_!!6000000004720-2-tps-200-200.png",
+          prompts: [
+            { value: "你好" },
+            { value: "帮我查询商户信息" },
+            { value: "查询交易流水" },
+          ],
+        },
+        session: {
+          multiple: true,
+          api: sessionApi,
+        },
+      };
+    },
+    [auth.token, sessionApi, rightHeader]
   );
 
+  console.log('[DEBUG] options.theme keys:', Object.keys(options.theme), 'rightHeader:', !!options.theme.rightHeader);
   return (
     <div style={{ height: "100vh" }}>
       <AgentScopeRuntimeWebUI options={options as unknown as Record<string, unknown>} />
