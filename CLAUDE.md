@@ -73,7 +73,7 @@ bash restart.sh
 | 表 | 关键列 | 说明 |
 |---|---|---|
 | users | id, passwd, is_admin, is_active | 内置 admin(is_admin=1)，明文密码 |
-| auth_tokens | token(UUID), user_id, created_at | 24h TTL |
+
 | session | id, user_id, name | 按用户隔离 |
 | message | id, msg(JSON), session_id, index | agentscope Msg.to_dict() 格式 |
 | message_mark | msg_id, mark | |
