@@ -67,8 +67,9 @@ export function useChatStream(token: string, sessionId: string | null) {
   }, []);
 
   const sendMessage = useCallback(
-    async (text: string) => {
-      if (!sessionId || !text.trim()) return;
+    async (text: string, overrideSessionId?: string) => {
+      const sid = overrideSessionId || sessionId;
+      if (!sid || !text.trim()) return;
 
       const userMsg: Message = { role: "user", content: text.trim() };
       // Placeholder assistant message — will be built up from SSE events
@@ -95,7 +96,7 @@ export function useChatStream(token: string, sessionId: string | null) {
           },
           body: JSON.stringify({
             input: [{ role: "user", content: [{ type: "text", text: text.trim() }] }],
-            session_id: sessionId,
+            session_id: sid,
             stream: true,
           }),
           signal: abortController.signal,

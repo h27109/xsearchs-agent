@@ -20,8 +20,10 @@ export default function ChatLayout({ auth, onLogout }: Props) {
   const {
     sessions,
     currentId,
+    pendingIds,
     selectSession,
     createNewSession,
+    persistSession,
     deleteSessionById,
     renameSessionById,
   } = useSessions(auth.token);
@@ -138,7 +140,10 @@ export default function ChatLayout({ auth, onLogout }: Props) {
             <ChatArea
               token={auth.token}
               sessionId={currentId}
+              isPending={currentId ? pendingIds.has(currentId) : false}
               onSessionUsed={selectSession}
+              onCreateSession={createNewSession}
+              onPersistSession={persistSession}
             />
           </div>
 

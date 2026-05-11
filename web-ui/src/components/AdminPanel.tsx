@@ -146,7 +146,7 @@ export default function AdminPanel({ open, token, onClose }: Props) {
       onCancel={onClose}
       footer={null}
       width={700}
-      destroyOnClose
+      destroyOnHidden
     >
       <Space style={{ marginBottom: 16 }}>
         <Input

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import WelcomeScreen from "./WelcomeScreen";
@@ -7,26 +7,54 @@ import { useChatStream } from "../hooks/useChatStream";
 interface Props {
   token: string;
   sessionId: string | null;
+  isPending?: boolean;
   onSessionUsed?: (id: string) => void;
+  onCreateSession?: () => Promise<string | null>;
+  onPersistSession?: (id: string, name: string) => Promise<void>;
 }
 
-export default function ChatArea({ token, sessionId, onSessionUsed }: Props) {
+export default function ChatArea({ token, sessionId, isPending, onSessionUsed, onCreateSession, onPersistSession }: Props) {
   const { messages, isStreaming, sendMessage, stopStreaming, loadHistory, clearMessages } =
     useChatStream(token, sessionId);
 
+  const skipLoadRef = useRef(false);
+
   useEffect(() => {
+    if (skipLoadRef.current) {
+      skipLoadRef.current = false;
+      return;
+    }
     if (sessionId) {
-      loadHistory(sessionId);
+      if (isPending) {
+        clearMessages();
+      } else {
+        loadHistory(sessionId);
+      }
     } else {
       clearMessages();
     }
-  }, [sessionId, loadHistory, clearMessages]);
+  }, [sessionId, isPending, loadHistory, clearMessages]);
 
-  const handleSend = (text: string) => {
-    if (sessionId) {
-      onSessionUsed?.(sessionId);
+  const handleSend = async (text: string) => {
+    let sid = sessionId;
+    let shouldPersist = false;
+    if (!sid && onCreateSession) {
+      const newId = await onCreateSession();
+      if (!newId) return;
+      sid = newId;
+      onSessionUsed?.(sid);
+      shouldPersist = true;
+    } else if (isPending) {
+      shouldPersist = true;
     }
-    sendMessage(text);
+    if (sid) {
+      if (shouldPersist) {
+        const name = text.trim().slice(0, 50) || "新会话";
+        skipLoadRef.current = true;
+        onPersistSession?.(sid, name);
+      }
+      sendMessage(text, sid);
+    }
   };
 
   if (!sessionId) {
@@ -42,7 +70,11 @@ export default function ChatArea({ token, sessionId, onSessionUsed }: Props) {
         background: "#141414",
       }}
     >
-      <MessageList messages={messages} />
+      {isPending ? (
+        <WelcomeScreen onPromptClick={handleSend} />
+      ) : (
+        <MessageList messages={messages} />
+      )}
       <ChatInput
         onSend={handleSend}
         disabled={isStreaming}
