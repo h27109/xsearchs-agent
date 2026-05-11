@@ -39,6 +39,9 @@ export function useChatStream(token: string, sessionId: string | null) {
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
+  // Track streaming state: map msg_id → { type: "reasoning"|"message", textParts: string[] }
+  const streamStateRef = useRef<Map<string, { msgType: string; textParts: string[] }>>(new Map());
+
   const loadHistory = useCallback(
     async (sid: string) => {
       if (!sid) return;
@@ -68,13 +71,17 @@ export function useChatStream(token: string, sessionId: string | null) {
       if (!sessionId || !text.trim()) return;
 
       const userMsg: Message = { role: "user", content: text.trim() };
+      // Placeholder assistant message — will be built up from SSE events
       const assistantMsg: Message = {
         role: "assistant",
-        content: [{ type: "text", text: "" }],
+        content: [],
       };
 
       setMessages((prev) => [...prev, userMsg, assistantMsg]);
       setIsStreaming(true);
+
+      // Reset stream state
+      streamStateRef.current.clear();
 
       const abortController = new AbortController();
       abortRef.current = abortController;
@@ -121,80 +128,87 @@ export function useChatStream(token: string, sessionId: string | null) {
               try {
                 const event = JSON.parse(jsonStr);
 
-                if (event.object === "content" && event.type === "text") {
-                  // Text delta
-                  const delta = event.text || "";
+                // New message starts — record its type and msg_id
+                if (event.object === "message" && event.status === "in_progress") {
+                  streamStateRef.current.set(event.id, {
+                    msgType: event.type || "message", // "reasoning" or "message"
+                    textParts: [],
+                  });
+                }
+
+                // Text delta — append to the corresponding msg_id
+                if (event.object === "content" && event.type === "text" && event.delta && event.msg_id) {
+                  const state = streamStateRef.current.get(event.msg_id);
+                  if (state) {
+                    state.textParts.push(event.text || "");
+                  }
+
+                  // Rebuild assistant message content from all tracked msg states
                   setMessages((prev) => {
                     const updated = [...prev];
                     const last = updated[updated.length - 1];
-                    if (last?.role === "assistant") {
-                      const content = Array.isArray(last.content)
-                        ? last.content
-                        : [{ type: "text" as const, text: last.content as string }];
-                      const textBlock = content.find(
-                        (b: ContentBlock) => b.type === "text"
-                      );
-                      if (textBlock) {
-                        textBlock.text = (textBlock.text || "") + delta;
-                      } else {
-                        content.push({ type: "text", text: delta });
+                    if (last?.role !== "assistant") return prev;
+
+                    const contentBlocks: ContentBlock[] = [];
+                    for (const [msgId, s] of streamStateRef.current) {
+                      const fullText = s.textParts.join("");
+                      if (s.msgType === "reasoning" && fullText) {
+                        contentBlocks.push({ type: "thinking", thinking: fullText, id: msgId });
+                      } else if (fullText) {
+                        contentBlocks.push({ type: "text", text: fullText, id: msgId });
                       }
-                      updated[updated.length - 1] = { ...last, content: [...content] };
                     }
+
+                    updated[updated.length - 1] = { ...last, content: contentBlocks.length > 0 ? contentBlocks : last.content };
                     return updated;
                   });
-                } else if (
-                  event.object === "content" &&
-                  event.type === "thinking"
-                ) {
-                  const delta = event.thinking || "";
-                  setMessages((prev) => {
-                    const updated = [...prev];
-                    const last = updated[updated.length - 1];
-                    if (last?.role === "assistant") {
-                      const content = Array.isArray(last.content)
-                        ? last.content
-                        : [{ type: "text" as const, text: last.content as string }];
-                      const thinkBlock = content.find(
-                        (b: ContentBlock) => b.type === "thinking"
-                      );
-                      if (thinkBlock) {
-                        thinkBlock.thinking =
-                          (thinkBlock.thinking || "") + delta;
-                      } else {
-                        content.unshift({ type: "thinking", thinking: delta });
-                      }
-                      updated[updated.length - 1] = { ...last, content: [...content] };
-                    }
-                    return updated;
-                  });
-                } else if (
-                  event.object === "response" &&
-                  event.status === "completed" &&
-                  event.output
-                ) {
-                  // Final message with complete content
+                }
+
+                // Completed response — replace with final structured content
+                if (event.object === "response" && event.status === "completed" && event.output) {
                   const outputMsgs = event.output.filter(
                     (o: Record<string, unknown>) => o.object === "message"
                   );
                   if (outputMsgs.length > 0) {
-                    const lastMsg = outputMsgs[outputMsgs.length - 1];
-                    const finalContent = normalizeContent(lastMsg.content);
+                    // Combine all output messages into content blocks
+                    const allBlocks: ContentBlock[] = [];
+                    for (const outMsg of outputMsgs) {
+                      const msgContent = normalizeContent(outMsg.content);
+                      const msgType = outMsg.type as string;
+                      if (typeof msgContent === "string") {
+                        if (msgType === "reasoning") {
+                          allBlocks.push({ type: "thinking", thinking: msgContent });
+                        } else {
+                          allBlocks.push({ type: "text", text: msgContent });
+                        }
+                      } else {
+                        for (const block of msgContent as ContentBlock[]) {
+                          // Map "reasoning" message content blocks to "thinking"
+                          if (msgType === "reasoning" && block.type === "text") {
+                            allBlocks.push({ type: "thinking", thinking: block.text || "" });
+                          } else {
+                            allBlocks.push(block);
+                          }
+                        }
+                      }
+                    }
+
                     setMessages((prev) => {
                       const updated = [...prev];
-                      // Replace the last assistant message
                       const lastIdx = updated.length - 1;
                       if (updated[lastIdx]?.role === "assistant") {
                         updated[lastIdx] = {
                           ...updated[lastIdx],
-                          id: lastMsg.id as string,
-                          content: finalContent,
+                          id: outputMsgs[outputMsgs.length - 1].id as string,
+                          content: allBlocks,
                         };
                       }
                       return updated;
                     });
                   }
-                } else if (event.error) {
+                }
+
+                if (event.error) {
                   setMessages((prev) => {
                     const updated = [...prev];
                     const last = updated[updated.length - 1];
@@ -240,6 +254,7 @@ export function useChatStream(token: string, sessionId: string | null) {
       } finally {
         setIsStreaming(false);
         abortRef.current = null;
+        streamStateRef.current.clear();
       }
     },
     [token, sessionId]

@@ -1,8 +1,8 @@
 ---
 name: simple-react-agent
 description: 解决第三支付系统相关助手
-provider: minimax
-model: MiniMax-M2.5
+provider: deepseek
+model: deepseek-v4-flash
 mcp:
    - 清算接口
    - 商户接口

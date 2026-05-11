@@ -12,14 +12,14 @@ models:
     max_iters: 90
 
   deepseek:
-    client_type: openai
-    formatter: deepseek
+    client_type: anthropic
+    formatter: anthropic
     api_key: ${DEEPSEEK_API_KEY}
     model:
       - "deepseek-v4-flash"
       - "deepseek-v4-pro"
     enable_thinking: false
-    base_url: "https://api.deepseek.com"
+    base_url: "https://api.deepseek.com/anthropic"
     stream: true
     max_iters: 90
 
