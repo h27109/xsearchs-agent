@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import aiosqlite
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -16,7 +17,7 @@ router = APIRouter(prefix="/sessions", tags=["sessions"])
 async def list_sessions(user: dict = Depends(get_current_user)):
     sessions = []
     async with get_db() as db:
-        db.row_factory = __import__("aiosqlite").Row
+        db.row_factory = aiosqlite.Row
         rows = await db.execute(
             """SELECT s.id, s.user_id, s.name, COUNT(m.id) as msg_count
                FROM session s
@@ -120,7 +121,7 @@ async def get_session_messages(
         if row[0] != user["user_id"]:
             raise HTTPException(status_code=403, detail="无权查看此会话")
 
-        db.row_factory = __import__("aiosqlite").Row
+        db.row_factory = aiosqlite.Row
         rows = await db.execute(
             'SELECT msg, "index" FROM message WHERE session_id = ? ORDER BY "index"',
             (session_id,),

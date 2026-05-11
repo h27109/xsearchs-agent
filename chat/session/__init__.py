@@ -1,6 +1,5 @@
-from chat.session.message_store import load_messages, update_session_name
+from chat.session.message_store import get_db
 
 __all__ = [
-    "load_messages",
-    "update_session_name",
+    "get_db",
 ]

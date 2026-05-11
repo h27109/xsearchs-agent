@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import aiosqlite
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPAuthorizationCredentials
 
-from manage.auth import create_token, delete_token, get_current_user
+from manage.auth import create_token, delete_token, get_current_user, security_scheme
 from manage.database import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -18,7 +20,7 @@ async def login(request: dict):
         return JSONResponse(status_code=422, content={"error": "用户名不能为空"})
 
     async with get_db() as db:
-        db.row_factory = __import__("aiosqlite").Row
+        db.row_factory = aiosqlite.Row
         cursor = await db.execute(
             "SELECT id, passwd, is_admin, is_active FROM users WHERE id = ?",
             (user_id,),
@@ -60,7 +62,7 @@ async def set_password(
         return JSONResponse(status_code=422, content={"error": "密码不能为空"})
 
     async with get_db() as db:
-        db.row_factory = __import__("aiosqlite").Row
+        db.row_factory = aiosqlite.Row
         cursor = await db.execute(
             "SELECT passwd FROM users WHERE id = ?", (user["user_id"],)
         )
@@ -91,7 +93,7 @@ async def change_password(
         return JSONResponse(status_code=422, content={"error": "旧密码和新密码不能为空"})
 
     async with get_db() as db:
-        db.row_factory = __import__("aiosqlite").Row
+        db.row_factory = aiosqlite.Row
         cursor = await db.execute(
             "SELECT passwd FROM users WHERE id = ?", (user["user_id"],)
         )
@@ -109,7 +111,11 @@ async def change_password(
 
 
 @router.post("/logout")
-async def logout(user: dict = Depends(get_current_user)):
+async def logout(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
+):
+    if credentials:
+        await delete_token(credentials.credentials)
     return {"success": True}
 
 

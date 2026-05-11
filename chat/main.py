@@ -1,6 +1,5 @@
 from contextlib import asynccontextmanager
 
-from fastapi import Request
 from agentscope.pipeline import stream_printing_messages
 from agentscope.session import RedisSession
 
@@ -9,7 +8,18 @@ from agentscope_runtime.engine.schemas.agent_schemas import AgentRequest
 
 from chat.config import load_config
 from chat.agent.react_agent_factory import load_react_agent
-from chat.session import load_messages, update_session_name
+from chat.session import get_db
+
+
+async def ensure_session(session_id: str, user_id: str, first_message: str = "") -> None:
+    """Auto-create session row if not exists, using first message as name."""
+    async with get_db() as db:
+        name = first_message[:50] if first_message else ""
+        await db.execute(
+            "INSERT OR IGNORE INTO session (id, user_id, name) VALUES (?, ?, ?)",
+            (session_id, user_id, name),
+        )
+        await db.commit()
 
 DEFAULT_TEMPLATE = "simple-react-agent"
 
@@ -40,6 +50,20 @@ async def query_func(
 ):
     session_id = request.session_id
     user_id = request.user_id
+
+    # Auto-create session row if it doesn't exist yet
+    first_msg_text = ""
+    if msgs and len(msgs) > 0:
+        first = msgs[0]
+        if hasattr(first, "content"):
+            raw = first.content
+            if isinstance(raw, str):
+                first_msg_text = raw
+            elif isinstance(raw, list) and len(raw) > 0:
+                block = raw[0]
+                if isinstance(block, dict) and "text" in block:
+                    first_msg_text = block["text"]
+    await ensure_session(session_id, user_id, first_msg_text)
 
     from sqlalchemy.ext.asyncio import create_async_engine
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import aiosqlite
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 
@@ -13,7 +14,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 async def list_users(_admin: dict = Depends(require_admin)):
     users = []
     async with get_db() as db:
-        db.row_factory = __import__("aiosqlite").Row
+        db.row_factory = aiosqlite.Row
         rows = await db.execute(
             "SELECT id, is_admin, is_active FROM users ORDER BY id",
         )

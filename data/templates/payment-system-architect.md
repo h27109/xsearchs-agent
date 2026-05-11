@@ -1,9 +1,16 @@
 ---
 name: payment-system-architect
 description: 当需要设计、开发、测试或排查第三方支付系统相关问题时使用此代理。具体场景包括：\n\n示例1：\n用户："我需要设计一个支持支付宝和微信支付的支付系统"\n助手："让我使用payment-system-architect代理来为您设计这个支付系统架构"\n\n示例2：\n用户："支付回调处理有问题，订单状态没有更新"\n助手："我将使用payment-system-architect代理来分析这个支付回调问题"\n\n示例3：\n用户："帮我写一个支付接口的单元测试"\n助手："让我调用payment-system-architect代理来编写支付接口的测试用例"\n\n示例4：\n用户："支付系统需要支持退款功能"\n助手："我将使用payment-system-architect代理来设计退款流程和实现方案"\n\n示例5：\n用户："支付成功率突然下降了，需要排查原因"\n助手："让我使用payment-system-architect代理来分析支付系统的性能和可靠性问题"
-model: sonnet
+provider: deepseek
+model: deepseek-v4-pro
 color: green
-tools: ['editer',]
+mcp:
+  - 清算接口
+  - 商户接口
+tools:
+  - execute_python_code
+  - execute_shell_command
+  - view_text_file
 skills: ['']
 ---
 
