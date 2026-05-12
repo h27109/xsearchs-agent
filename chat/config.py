@@ -74,10 +74,27 @@ class ModelConfig:
 
 
 @dataclass(frozen=True)
+class MemoryEmbeddingConfig:
+    provider: str = ""
+    model: str = ""
+    api_key: str = ""
+    base_url: str = ""
+    dimensions: int = 1024
+
+
+@dataclass(frozen=True)
+class MemoryConfig:
+    enabled: bool = False
+    model_provider: str = ""
+    embedding: MemoryEmbeddingConfig = field(default_factory=MemoryEmbeddingConfig)
+
+
+@dataclass(frozen=True)
 class AppConfig:
     models: dict[str, ModelConfig] = field(default_factory=dict)
     mcp: dict = field(default_factory=dict)
     sqlite_url: str = ""
+    memory: MemoryConfig = field(default_factory=MemoryConfig)
 
 
 def _parse_model_config(provider_name: str, cfg: dict) -> ModelConfig:
@@ -126,8 +143,23 @@ def load_config() -> AppConfig:
     db_name = sqlite.get("db", "memory.db")
     sqlite_url = f"sqlite+aiosqlite:///{data_dir / db_name}"
 
+    raw_memory = raw.get("memory") or {}
+    raw_embedding = raw_memory.get("embedding") or {}
+    memory_config = MemoryConfig(
+        enabled=raw_memory.get("enabled", False),
+        model_provider=raw_memory.get("model_provider", ""),
+        embedding=MemoryEmbeddingConfig(
+            provider=raw_embedding.get("provider", ""),
+            model=raw_embedding.get("model", ""),
+            api_key=raw_embedding.get("api_key", ""),
+            base_url=raw_embedding.get("base_url", ""),
+            dimensions=raw_embedding.get("dimensions", 1024),
+        ),
+    )
+
     return AppConfig(
         models=models,
         mcp=raw.get("MCP", {}),
         sqlite_url=sqlite_url,
+        memory=memory_config,
     )

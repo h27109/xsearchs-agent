@@ -18,6 +18,7 @@ from agentscope.tool import (
 
 from chat.config import AppConfig, get_data_dir
 from chat.agent.model_factory import create_formatter, create_model
+from chat.agent.user_memory import create_long_term_memory
 
 _TEMPLATE_DIR = get_data_dir() / "templates"
 
@@ -139,6 +140,10 @@ async def load_react_agent(
         meta, app_config.mcp, fix_deepseek=(provider_name == "deepseek"),
     )
 
+    long_term_memory = create_long_term_memory(
+        app_config, user_id or "",
+    )
+
     agent = ReActAgent(
         name=meta.get("name", template_name),
         sys_prompt=sys_prompt,
@@ -146,6 +151,8 @@ async def load_react_agent(
         max_iters=mc.max_iters,
         formatter=formatter,
         toolkit=toolkit,
+        long_term_memory=long_term_memory,
+        long_term_memory_mode="agent_control",
         memory=AsyncSQLAlchemyMemory(
             engine_or_session=engine,
             user_id=user_id,

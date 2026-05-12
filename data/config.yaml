@@ -26,7 +26,16 @@ models:
 sqlite:
   db: "memory.db"
 
-MCP: 
+memory:
+  enabled: false
+  model_provider: "deepseek"
+  embedding:
+    provider: "glm"
+    model: "embedding-3"
+    api_key: ${GLM_API_KEY}
+    dimensions: 1024
+
+MCP:
   清算接口: 
     url: "https://ai.jlpay.com/mcp-clear/mcp"
     type: "streamable_http"
