@@ -51,13 +51,6 @@ _INIT_SQL = [
         PRIMARY KEY (msg_id, mark),
         FOREIGN KEY(msg_id) REFERENCES message (id) ON DELETE CASCADE
     )""",
-    """CREATE TABLE IF NOT EXISTS auth_tokens (
-        token VARCHAR(255) NOT NULL,
-        user_id VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (token),
-        FOREIGN KEY(user_id) REFERENCES users (id)
-    )""",
     """CREATE INDEX IF NOT EXISTS ix_message_index ON message ("index")""",
 ]
 

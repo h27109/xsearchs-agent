@@ -9,7 +9,7 @@
 | **多用户** | 独立用户认证、会话隔离、记忆隔离 |
 | **多 Agent** | 模板驱动的 ReActAgent / DeepResearchAgent，运行时切换 |
 | **可扩展** | MCP 协议工具集成，YAML 配置驱动，模板热加载 |
-| **企业级** | Bearer Token 认证、管理员管控、数据持久化 |
+| **企业级** | HTTP Basic Auth 认证、管理员管控、数据持久化 |
 | **自动学习** | Mem0 长期记忆 + 向量语义检索，跨会话积累用户知识 |
 
 ## 架构
@@ -29,7 +29,7 @@ xsearchs-agent/
 ├── manage/                       # 管理后端 :8091 — 用户/认证/会话 CRUD
 │   ├── main.py                   # FastAPI 入口
 │   ├── database.py               # init_db() 建表 + 初始 admin
-│   ├── auth.py                   # Bearer Token 鉴权
+│   ├── auth.py                   # HTTP Basic Auth 鉴权
 │   └── routes/                   # /auth /users /sessions /agent-templates
 ├── web-ui/                       # 前端 :5173 — Vite + React + TypeScript
 │   └── src/
@@ -87,7 +87,7 @@ bash restart.sh        # 一键启动 chat + manage + web-ui
 - 管理员创建用户（初始无密码），用户首次登录自行设置密码
 - 每个用户独立的会话列表和历史消息
 - 长期记忆按 `user_id` 隔离，用户间互不可见
-- 24 小时 Token 过期机制
+- HTTP Basic Auth 认证（user_id + password）
 
 ## 多 Agent 体系
 
@@ -130,7 +130,7 @@ MCP:
       Authorization: ${MCP_CLEAR_TOKEN}
 ```
 
-支持 Streamable HTTP 协议、Bearer Token 认证，运行时动态注册到 Agent 工具箱。
+支持 Streamable HTTP 协议、HTTP Basic Auth，运行时动态注册到 Agent 工具箱。
 
 ## 长期记忆（自动学习）
 
@@ -196,16 +196,15 @@ memory:
 | 端点 | 方法 | 鉴权 | 说明 |
 |------|------|------|------|
 | `/auth/login` | POST | 无 | 登录 |
-| `/auth/set-password` | POST | token | 设置初始密码 |
-| `/auth/change-password` | POST | token | 修改密码 |
-| `/auth/logout` | POST | 可选 | 注销 |
-| `/auth/verify` | GET | token | 验证 token |
+| `/auth/set-password` | POST | Basic | 设置初始密码 |
+| `/auth/change-password` | POST | Basic | 修改密码 |
+| `/auth/verify` | GET | Basic | 验证认证 |
 | `/users` | GET/POST | admin | 用户列表 / 创建 |
 | `/users/:id` | PATCH | admin | 修改权限 / 状态 |
 | `/users/:id/reset-password` | POST | admin | 重置密码 |
-| `/sessions` | GET/POST | token | 会话列表 / 创建 |
-| `/sessions/:id` | PATCH/DELETE | token | 重命名 / 删除 |
-| `/sessions/:id/messages` | GET | token | 历史消息 |
+| `/sessions` | GET/POST | Basic | 会话列表 / 创建 |
+| `/sessions/:id` | PATCH/DELETE | Basic | 重命名 / 删除 |
+| `/sessions/:id/messages` | GET | Basic | 历史消息 |
 | `/agent-templates` | GET | 无 | 可用 Agent 列表 |
 
 ## 数据库
@@ -218,7 +217,7 @@ SQLite，位于 `data/memory.db`：
 | `session` | 会话（id, user_id, name, agent_id） |
 | `message` | 消息（id, msg JSON, session_id, index） |
 | `message_mark` | 消息标记（压缩等） |
-| `auth_tokens` | 认证令牌（24h 过期） |
+| — | HTTP Basic Auth，无需令牌表 |
 
 ## 环境变量
 

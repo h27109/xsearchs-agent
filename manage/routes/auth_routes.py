@@ -3,9 +3,8 @@ from __future__ import annotations
 import aiosqlite
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
-from fastapi.security import HTTPAuthorizationCredentials
 
-from manage.auth import create_token, delete_token, get_current_user, security_scheme
+from manage.auth import get_current_user
 from manage.database import get_db
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -41,15 +40,18 @@ async def login(request: dict):
                 )
                 await db.commit()
         else:
-            return {"need_set_password": True, "user_id": user_id, "is_admin": bool(row["is_admin"])}
+            return {
+                "need_set_password": True,
+                "user_id": user_id,
+                "is_admin": bool(row["is_admin"]),
+            }
     else:
         if not password:
             raise HTTPException(status_code=401, detail="请输入密码")
         if password != stored_passwd:
             raise HTTPException(status_code=401, detail="用户名或密码错误")
 
-    token = await create_token(user_id)
-    return {"token": token, "user_id": user_id, "is_admin": bool(row["is_admin"])}
+    return {"user_id": user_id, "is_admin": bool(row["is_admin"])}
 
 
 @router.post("/set-password")
@@ -107,15 +109,6 @@ async def change_password(
             (new_password, user["user_id"]),
         )
         await db.commit()
-    return {"success": True}
-
-
-@router.post("/logout")
-async def logout(
-    credentials: HTTPAuthorizationCredentials | None = Depends(security_scheme),
-):
-    if credentials:
-        await delete_token(credentials.credentials)
     return {"success": True}
 
 

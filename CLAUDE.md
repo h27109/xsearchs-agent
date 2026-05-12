@@ -33,7 +33,7 @@ xsearchs_agent/
 ├── manage/                     # 管理后端 :8091 — 用户/认证/会话 CRUD + DB 初始化
 │   ├── main.py                 # FastAPI + CORS，启动时调用 init_db()
 │   ├── database.py             # init_db() — 建表 + 初始 admin, get_db()
-│   ├── auth.py                 # 明文密码、Bearer Token (24h 过期)、Depends
+│   ├── auth.py                 # 明文密码、HTTP Basic Auth、Depends
 │   └── routes/                 # /auth /users /sessions /agent-templates
 ├── web-ui/                     # 前端 :5173 — Vite + React + TypeScript + Ant Design 5
 │   ├── src/App.tsx             # 登录→设密→聊天 状态机
@@ -72,7 +72,6 @@ cd web-ui && npm run dev                                           # 前端 :517
 | session | id, user_id, name, agent_id | 按用户隔离，agent_id 对应 data/templates/*.md 的 name |
 | message | id, msg(JSON), session_id, index | agentscope Msg.to_dict() 格式 |
 | message_mark | msg_id, mark | 消息标记（压缩等） |
-| auth_tokens | token, user_id, created_at | Bearer Token（24h 过期） |
 
 `manage/database.py` 的 `init_db()` 执行建表 + `INSERT OR IGNORE admin`，仅 manage 后端在启动时调用。
 `chat/session/message_store.py` 的 `get_db()` 提供 chat 后端的连接，两后端各自管理自己的 DB 访问。
@@ -83,21 +82,20 @@ cd web-ui && npm run dev                                           # 前端 :517
 
 | 端点 | 鉴权 | 说明 |
 |---|---|---|
-| POST /auth/login | 无 | {id,password} → {token,is_admin} 或 {need_set_password} |
-| POST /auth/set-password | token | passwd 为空时设置 |
-| POST /auth/change-password | token | 改自己密码 |
-| POST /auth/logout | 可选token | 删除 token 使其失效 |
-| GET /auth/verify | token | 验证 token 有效性 |
+| POST /auth/login | 无 | {id,password} → {user_id,is_admin} 或 {need_set_password} |
+| POST /auth/set-password | Basic | passwd 为空时设置 |
+| POST /auth/change-password | Basic | 改自己密码 |
+| GET /auth/verify | Basic | 验证认证有效性 |
 | GET /agent-templates | 无 | 列出可用智能体模板（读取 data/templates/*.md 的 YAML frontmatter） |
 | GET /users | admin | 列出所有用户 |
 | POST /users | admin | 创建用户(无密码) |
 | PATCH /users/:id | admin | 修改用户 is_admin/is_active（admin 自身不可修改） |
 | POST /users/:id/reset-password | admin | 清空密码 |
-| GET /sessions | token | 当前用户的会话(ORDER BY rowid DESC) |
-| POST /sessions | token | 创建会话，可传 {id, agent_id} |
-| PATCH /sessions/:id | token | 修改会话名称 |
-| DELETE /sessions/:id | token | 删会话(验证归属) |
-| GET /sessions/:id/messages | token | 读历史消息 |
+| GET /sessions | Basic | 当前用户的会话(ORDER BY rowid DESC) |
+| POST /sessions | Basic | 创建会话，可传 {id, agent_id} |
+| PATCH /sessions/:id | Basic | 修改会话名称 |
+| DELETE /sessions/:id | Basic | 删会话(验证归属) |
+| GET /sessions/:id/messages | Basic | 读历史消息 |
 
 ### 对话后端 (8090)
 
