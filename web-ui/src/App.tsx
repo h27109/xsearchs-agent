@@ -16,7 +16,7 @@ function App() {
   useEffect(() => {
     const saved = getAuth();
     if (saved) {
-      verifyToken(saved.token).then((info) => {
+      verifyAuth().then((info) => {
         if (info?.valid) {
           const updated = { ...saved, is_admin: info.is_admin };
           setAuth(updated);

@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from "react";
 import { ConfigProvider, theme, Drawer, Button, App } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
 import type { AuthState } from "../api/auth";
-import { logout as apiLogout } from "../api/auth";
 import { useSessions } from "../hooks/useSessions";
 import type { AgentInfo } from "../api/sessions";
 import { getAgentTemplateList } from "../api/sessions";
@@ -28,7 +27,7 @@ export default function ChatLayout({ auth, onLogout }: Props) {
     persistSession,
     deleteSessionById,
     renameSessionById,
-  } = useSessions(auth.token);
+  } = useSessions();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(
@@ -39,8 +38,8 @@ export default function ChatLayout({ auth, onLogout }: Props) {
   const [agents, setAgents] = useState<AgentInfo[]>([]);
 
   useEffect(() => {
-    getAgentTemplateList(auth.token).then(setAgents).catch(() => {});
-  }, [auth.token]);
+    getAgentTemplateList().then(setAgents).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -50,10 +49,9 @@ export default function ChatLayout({ auth, onLogout }: Props) {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleLogout = useCallback(async () => {
-    await apiLogout(auth.token);
+  const handleLogout = useCallback(() => {
     onLogout();
-  }, [auth.token, onLogout]);
+  }, [onLogout]);
 
   const handleCreate = useCallback(async (agentId: string) => {
     await createNewSession(agentId);
@@ -146,7 +144,6 @@ export default function ChatLayout({ auth, onLogout }: Props) {
             )}
 
             <ChatArea
-              token={auth.token}
               sessionId={currentId}
               isPending={currentId ? pendingIds.has(currentId) : false}
               agentId={
@@ -182,12 +179,10 @@ export default function ChatLayout({ auth, onLogout }: Props) {
 
         <AdminPanel
           open={adminOpen}
-          token={auth.token}
           onClose={() => setAdminOpen(false)}
         />
         <ChangePasswordModal
           open={pwdOpen}
-          token={auth.token}
           onClose={() => setPwdOpen(false)}
         />
       </App>

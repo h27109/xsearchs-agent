@@ -5,7 +5,6 @@ import WelcomeScreen from "./WelcomeScreen";
 import { useChatStream } from "../hooks/useChatStream";
 
 interface Props {
-  token: string;
   sessionId: string | null;
   isPending?: boolean;
   agentId?: string;
@@ -14,9 +13,9 @@ interface Props {
   onPersistSession?: (id: string, name: string, agentId?: string) => Promise<void>;
 }
 
-export default function ChatArea({ token, sessionId, isPending, agentId, onSessionUsed, onCreateSession, onPersistSession }: Props) {
+export default function ChatArea({ sessionId, isPending, agentId, onSessionUsed, onCreateSession, onPersistSession }: Props) {
   const { messages, isStreaming, sendMessage, stopStreaming, loadHistory, clearMessages } =
-    useChatStream(token, sessionId);
+    useChatStream(sessionId);
 
   const skipLoadRef = useRef(false);
 

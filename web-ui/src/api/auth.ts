@@ -1,8 +1,8 @@
 const MANAGE_URL = "/api/manage";
 
 export interface AuthState {
-  token: string;
   user_id: string;
+  password: string;
   is_admin: boolean;
 }
 
@@ -25,8 +25,13 @@ export function clearAuth(): void {
   localStorage.removeItem(AUTH_KEY);
 }
 
+export function getAuthHeader(): string {
+  const auth = getAuth();
+  if (!auth) return "";
+  return "Basic " + btoa(`${auth.user_id}:${auth.password}`);
+}
+
 interface LoginResult {
-  token?: string;
   user_id: string;
   is_admin?: boolean;
   need_set_password?: boolean;
@@ -48,15 +53,12 @@ export async function login(
   return resp.json();
 }
 
-export async function setPassword(
-  token: string,
-  newPassword: string
-): Promise<void> {
+export async function setPassword(newPassword: string): Promise<void> {
   const resp = await fetch(`${MANAGE_URL}/auth/set-password`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: getAuthHeader(),
     },
     body: JSON.stringify({ new_password: newPassword }),
   });
@@ -67,7 +69,6 @@ export async function setPassword(
 }
 
 export async function changePassword(
-  token: string,
   oldPassword: string,
   newPassword: string
 ): Promise<void> {
@@ -75,7 +76,7 @@ export async function changePassword(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: getAuthHeader(),
     },
     body: JSON.stringify({
       old_password: oldPassword,
@@ -88,21 +89,14 @@ export async function changePassword(
   }
 }
 
-export async function logout(token: string): Promise<void> {
-  await fetch(`${MANAGE_URL}/auth/logout`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-  }).catch(() => {});
-}
-
-export async function verifyToken(token: string): Promise<{
+export async function verifyAuth(): Promise<{
   valid: boolean;
   user_id: string;
   is_admin: boolean;
 } | null> {
   try {
     const resp = await fetch(`${MANAGE_URL}/auth/verify`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: getAuthHeader() },
     });
     if (!resp.ok) return null;
     return resp.json();

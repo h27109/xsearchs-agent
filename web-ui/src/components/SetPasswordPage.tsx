@@ -25,10 +25,10 @@ export default function SetPasswordPage({ userId, onSuccess }: Props) {
     setLoading(true);
     try {
       const result = await login(userId, values.password);
-      if (result.token) {
+      if (!result.need_set_password) {
         const auth: AuthState = {
-          token: result.token,
           user_id: result.user_id,
+          password: values.password,
           is_admin: result.is_admin || false,
         };
         setAuth(auth);

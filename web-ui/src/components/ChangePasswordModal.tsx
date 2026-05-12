@@ -5,11 +5,10 @@ import { changePassword } from "../api/auth";
 
 interface Props {
   open: boolean;
-  token: string;
   onClose: () => void;
 }
 
-export default function ChangePasswordModal({ open, token, onClose }: Props) {
+export default function ChangePasswordModal({ open, onClose }: Props) {
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const { message } = App.useApp();
@@ -22,7 +21,7 @@ export default function ChangePasswordModal({ open, token, onClose }: Props) {
         return;
       }
       setLoading(true);
-      await changePassword(token, values.old_password, values.new_password);
+      await changePassword(values.old_password, values.new_password);
       message.success("密码修改成功");
       form.resetFields();
       onClose();

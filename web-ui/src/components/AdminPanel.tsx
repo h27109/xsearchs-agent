@@ -24,11 +24,10 @@ import {
 
 interface Props {
   open: boolean;
-  token: string;
   onClose: () => void;
 }
 
-export default function AdminPanel({ open, token, onClose }: Props) {
+export default function AdminPanel({ open, onClose }: Props) {
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [newUserId, setNewUserId] = useState("");
@@ -38,14 +37,14 @@ export default function AdminPanel({ open, token, onClose }: Props) {
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await listUsers(token);
+      const data = await listUsers();
       setUsers(data);
     } catch {
       message.error("加载用户列表失败");
     } finally {
       setLoading(false);
     }
-  }, [token, message]);
+  }, [message]);
 
   useEffect(() => {
     if (open) fetchUsers();
@@ -55,7 +54,7 @@ export default function AdminPanel({ open, token, onClose }: Props) {
     if (!newUserId.trim()) return;
     setAdding(true);
     try {
-      await createUser(token, newUserId.trim());
+      await createUser( newUserId.trim());
       message.success(`用户 "${newUserId.trim()}" 创建成功`);
       setNewUserId("");
       fetchUsers();
@@ -68,7 +67,7 @@ export default function AdminPanel({ open, token, onClose }: Props) {
 
   const handleToggleActive = async (user: UserInfo) => {
     try {
-      await updateUser(token, user.id, { is_active: !user.is_active });
+      await updateUser( user.id, { is_active: !user.is_active });
       message.success(
         user.is_active ? `已禁用用户 "${user.id}"` : `已启用用户 "${user.id}"`
       );
@@ -80,7 +79,7 @@ export default function AdminPanel({ open, token, onClose }: Props) {
 
   const handleResetPassword = async (userId: string) => {
     try {
-      await resetUserPassword(token, userId);
+      await resetUserPassword( userId);
       message.success(`已重置用户 "${userId}" 的密码`);
     } catch (e: unknown) {
       message.error(e instanceof Error ? e.message : "重置失败");

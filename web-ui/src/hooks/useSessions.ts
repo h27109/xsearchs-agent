@@ -21,7 +21,7 @@ function generateId(): string {
   return `${ts}-${rand}`;
 }
 
-export function useSessions(token: string) {
+export function useSessions() {
   const [sessions, setSessions] = useState<SessionInfo[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,14 +30,14 @@ export function useSessions(token: string) {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const list = await getSessionList(token);
+      const list = await getSessionList();
       setSessions(list);
     } catch {
       // ignore
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
   useEffect(() => {
     refresh();
@@ -60,7 +60,7 @@ export function useSessions(token: string) {
     async (id: string, name: string, agentId?: string) => {
       if (!pendingIds.has(id)) return;
       try {
-        await createSession(token, name, id, agentId);
+        await createSession(name, id, agentId);
         setPendingIds((prev) => {
           const next = new Set(prev);
           next.delete(id);
@@ -73,14 +73,14 @@ export function useSessions(token: string) {
         // ignore
       }
     },
-    [token, pendingIds]
+    [pendingIds]
   );
 
   const deleteSessionById = useCallback(
     async (id: string) => {
       try {
         if (!pendingIds.has(id)) {
-          await deleteSession(token, id);
+          await deleteSession(id);
         }
         if (currentId === id) setCurrentId(null);
         setPendingIds((prev) => {
@@ -93,7 +93,7 @@ export function useSessions(token: string) {
         // ignore
       }
     },
-    [token, currentId, pendingIds]
+    [currentId, pendingIds]
   );
 
   const renameSessionById = useCallback(
@@ -105,13 +105,13 @@ export function useSessions(token: string) {
         return;
       }
       try {
-        await updateSessionName(token, id, name);
+        await updateSessionName(id, name);
         await refresh();
       } catch {
         // ignore
       }
     },
-    [token, refresh, pendingIds]
+    [refresh, pendingIds]
   );
 
   return {

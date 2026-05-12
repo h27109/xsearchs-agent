@@ -20,10 +20,10 @@ export default function LoginPage({ onLogin, onNeedSetPassword }: Props) {
       const result = await login(values.id, values.password);
       if (result.need_set_password) {
         onNeedSetPassword(result.user_id);
-      } else if (result.token) {
+      } else {
         const auth: AuthState = {
-          token: result.token,
           user_id: result.user_id,
+          password: values.password,
           is_admin: result.is_admin || false,
         };
         setAuth(auth);

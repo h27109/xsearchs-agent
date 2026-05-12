@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from "react";
+import { getAuthHeader } from "../api/auth";
 
 export interface ContentBlock {
   type: "text" | "thinking" | "tool_use" | "tool_result";
@@ -34,7 +35,7 @@ function normalizeMessages(raw: Record<string, unknown>[]): Message[] {
 
 const CHAT_URL = "/api/chat/process";
 
-export function useChatStream(token: string, sessionId: string | null) {
+export function useChatStream(sessionId: string | null) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
@@ -47,7 +48,7 @@ export function useChatStream(token: string, sessionId: string | null) {
       if (!sid) return;
       try {
         const resp = await fetch(`/api/manage/sessions/${sid}/messages`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: getAuthHeader() },
         });
         if (resp.ok) {
           const data = await resp.json();
@@ -57,7 +58,7 @@ export function useChatStream(token: string, sessionId: string | null) {
         // ignore
       }
     },
-    [token]
+    []
   );
 
   const stopStreaming = useCallback(() => {
@@ -92,7 +93,7 @@ export function useChatStream(token: string, sessionId: string | null) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            Authorization: getAuthHeader(),
           },
           body: JSON.stringify({
             input: [{ role: "user", content: [{ type: "text", text: text.trim() }] }],
@@ -259,7 +260,7 @@ export function useChatStream(token: string, sessionId: string | null) {
         streamStateRef.current.clear();
       }
     },
-    [token, sessionId]
+    [sessionId]
   );
 
   const clearMessages = useCallback(() => setMessages([]), []);

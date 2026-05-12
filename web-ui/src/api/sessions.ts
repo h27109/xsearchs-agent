@@ -1,4 +1,4 @@
-import { MANAGE_URL } from "./auth";
+import { MANAGE_URL, getAuthHeader } from "./auth";
 
 export interface AgentInfo {
   name: string;
@@ -16,18 +16,16 @@ export interface SessionInfo {
   agent_id: string;
 }
 
-export async function getAgentTemplateList(token: string): Promise<AgentInfo[]> {
-  const resp = await fetch(`${MANAGE_URL}/agent-templates`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+export async function getAgentTemplateList(): Promise<AgentInfo[]> {
+  const resp = await fetch(`${MANAGE_URL}/agent-templates`);
   if (!resp.ok) throw new Error("Failed to fetch agent templates");
   const data = await resp.json();
   return data.agent_templates || [];
 }
 
-export async function getSessionList(token: string): Promise<SessionInfo[]> {
+export async function getSessionList(): Promise<SessionInfo[]> {
   const resp = await fetch(`${MANAGE_URL}/sessions`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: getAuthHeader() },
   });
   if (!resp.ok) throw new Error("Failed to fetch sessions");
   const data = await resp.json();
@@ -35,7 +33,6 @@ export async function getSessionList(token: string): Promise<SessionInfo[]> {
 }
 
 export async function createSession(
-  token: string,
   name: string,
   id?: string,
   agentId?: string
@@ -47,7 +44,7 @@ export async function createSession(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: getAuthHeader(),
     },
     body: JSON.stringify(body),
   });
@@ -56,7 +53,6 @@ export async function createSession(
 }
 
 export async function updateSessionName(
-  token: string,
   sessionId: string,
   name: string
 ): Promise<void> {
@@ -64,29 +60,25 @@ export async function updateSessionName(
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
+      Authorization: getAuthHeader(),
     },
     body: JSON.stringify({ name }),
   });
 }
 
-export async function deleteSession(
-  token: string,
-  sessionId: string
-): Promise<void> {
+export async function deleteSession(sessionId: string): Promise<void> {
   await fetch(`${MANAGE_URL}/sessions/${sessionId}`, {
     method: "DELETE",
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: getAuthHeader() },
   });
 }
 
 export async function getSessionMessages(
-  token: string,
   sessionId: string
 ): Promise<Record<string, unknown>[]> {
   if (!sessionId) return [];
   const resp = await fetch(`${MANAGE_URL}/sessions/${sessionId}/messages`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: getAuthHeader() },
   });
   if (!resp.ok) throw new Error("Failed to fetch messages");
   const data = await resp.json();
