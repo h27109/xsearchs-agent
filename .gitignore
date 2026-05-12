@@ -30,6 +30,9 @@ Thumbs.db
 # Node
 web-ui-v2/node_modules/
 web-ui-v2/dist/
+web-ui/node_modules/
+web-ui/dist/
+web-ui/package-lock.json
 .vite/
 
 # Runtime dirs
