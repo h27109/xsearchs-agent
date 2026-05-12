@@ -5,8 +5,8 @@ provider: deepseek
 model: deepseek-v4-pro
 color: blue
 mcp:
-  - 清算接口
-  - 商户接口
+  - mcp-clear
+  - mcp-csas
 tools:
   - execute_python_code
   - execute_shell_command

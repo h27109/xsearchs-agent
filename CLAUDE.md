@@ -157,7 +157,7 @@ color: "blue"             # 前端展示颜色
 tools:                    # 内置工具
   - "execute_python_code"
 mcp:                      # 引用的 MCP 服务器
-  - "清算接口"
+  - "mcp-clear"
 ---
 系统提示词正文...
 ```

@@ -104,8 +104,8 @@ tools:
   - "execute_python_code"
   - "execute_shell_command"
 mcp:
-  - "清算接口"
-  - "商户接口"
+  - "mcp-clear"
+  - "mcp-csas"
 ---
 
 你是一个专业的支付系统架构师...
@@ -123,8 +123,8 @@ mcp:
 
 ```yaml
 MCP:
-  清算接口:
-    url: "https://ai.jlpay.com/mcp-clear/mcp"
+  mcp-clear:
+    url: "https://ai.xsearchs.com/mcp-clear/mcp"
     type: "streamable_http"
     headers:
       Authorization: ${MCP_CLEAR_TOKEN}

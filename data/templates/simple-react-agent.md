@@ -4,8 +4,8 @@ description: 解决第三支付系统相关助手
 provider: minimax
 model: MiniMax-M2.7
 mcp:
-   - 清算接口
-   - 商户接口
+   - mcp-clear
+   - mcp-csas
 tools:
     - execute_python_code
     - execute_shell_command
