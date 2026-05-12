@@ -1,10 +1,28 @@
 import { MANAGE_URL } from "./auth";
 
+export interface AgentInfo {
+  name: string;
+  description: string;
+  provider: string;
+  model: string;
+  color: string;
+}
+
 export interface SessionInfo {
   id: string;
   user_id: string;
   name: string;
   msg_count: number;
+  agent_id: string;
+}
+
+export async function getAgentTemplateList(token: string): Promise<AgentInfo[]> {
+  const resp = await fetch(`${MANAGE_URL}/agent-templates`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) throw new Error("Failed to fetch agent templates");
+  const data = await resp.json();
+  return data.agent_templates || [];
 }
 
 export async function getSessionList(token: string): Promise<SessionInfo[]> {
@@ -19,10 +37,12 @@ export async function getSessionList(token: string): Promise<SessionInfo[]> {
 export async function createSession(
   token: string,
   name: string,
-  id?: string
+  id?: string,
+  agentId?: string
 ): Promise<SessionInfo> {
   const body: Record<string, string> = { name };
   if (id) body.id = id;
+  if (agentId) body.agent_id = agentId;
   const resp = await fetch(`${MANAGE_URL}/sessions`, {
     method: "POST",
     headers: {

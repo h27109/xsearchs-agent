@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+import aiosqlite
 from agentscope.pipeline import stream_printing_messages
 from agentscope.session import RedisSession
 
@@ -8,20 +9,21 @@ from agentscope_runtime.engine.schemas.agent_schemas import AgentRequest
 
 from chat.config import load_config
 from chat.agent.react_agent_factory import load_react_agent
+from chat.agent.deep_research_agent_factory import load_deep_research_agent
 from chat.session import get_db
 
+FALLBACK_TEMPLATE = "simple-react-agent"
 
-async def ensure_session(session_id: str, user_id: str, first_message: str = "") -> None:
+
+async def ensure_session(session_id: str, user_id: str, agent_id: str, first_message: str = "") -> None:
     """Auto-create session row if not exists, using first message as name."""
     async with get_db() as db:
         name = first_message[:50] if first_message else ""
         await db.execute(
-            "INSERT OR IGNORE INTO session (id, user_id, name) VALUES (?, ?, ?)",
-            (session_id, user_id, name),
+            "INSERT OR IGNORE INTO session (id, user_id, name, agent_id) VALUES (?, ?, ?, ?)",
+            (session_id, user_id, name, agent_id),
         )
         await db.commit()
-
-DEFAULT_TEMPLATE = "simple-react-agent"
 
 
 @asynccontextmanager
@@ -51,6 +53,17 @@ async def query_func(
     session_id = request.session_id
     user_id = request.user_id
 
+    # Resolve agent_id: request → DB → fallback
+    agent_id = getattr(request, "agent_id", None)
+    if not agent_id:
+        async with get_db() as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT agent_id FROM session WHERE id = ?", (session_id,)
+            )
+            row = await cursor.fetchone()
+            agent_id = row["agent_id"] if row and row["agent_id"] else FALLBACK_TEMPLATE
+
     # Auto-create session row if it doesn't exist yet
     first_msg_text = ""
     if msgs and len(msgs) > 0:
@@ -63,19 +76,29 @@ async def query_func(
                 block = raw[0]
                 if isinstance(block, dict) and "text" in block:
                     first_msg_text = block["text"]
-    await ensure_session(session_id, user_id, first_msg_text)
+    await ensure_session(session_id, user_id, agent_id, first_msg_text)
 
     from sqlalchemy.ext.asyncio import create_async_engine
 
     cfg = agent_app.state.config
     engine = create_async_engine(cfg.sqlite_url)
-    agent = await load_react_agent(
-        template_name=DEFAULT_TEMPLATE,
-        app_config=cfg,
-        engine=engine,
-        user_id=user_id,
-        session_id=session_id,
-    )
+
+    if agent_id == "deep-research-agent":
+        agent = await load_deep_research_agent(
+            template_name=agent_id,
+            app_config=cfg,
+            engine=engine,
+            user_id=user_id,
+            session_id=session_id,
+        )
+    else:
+        agent = await load_react_agent(
+            template_name=agent_id,
+            app_config=cfg,
+            engine=engine,
+            user_id=user_id,
+            session_id=session_id,
+        )
 
     await agent_app.state.session.load_session_state(
         session_id=session_id,

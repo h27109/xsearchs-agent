@@ -29,13 +29,13 @@ xsearchs_agent/
 │   ├── main.py                 # FastAPI + CORS，启动时调用 init_db()
 │   ├── database.py             # init_db() — 建表 + 初始 admin, get_db()
 │   ├── auth.py                 # 明文密码、Bearer Token、Depends
-│   └── routes/                 # /auth /users /sessions
-├── web-ui-v2/                  # 前端 :5174 — Vite + React + TypeScript + Ant Design
+│   └── routes/                 # /auth /users /sessions /agent-templates
+├── web-ui/                     # 前端 :5173 — Vite + React + TypeScript + Ant Design
 │   ├── src/App.tsx             # 登录→设密→聊天 状态机
 │   ├── src/api/                # auth/sessions/users HTTP 封装
 │   ├── src/components/         # ChatLayout, ChatArea, Sidebar, MessageList 等
 │   └── vite.config.ts          # proxy: /api/manage→8091 /api/chat→8090
-├── restart.sh                  # 重启脚本（chat + manage + web-ui-v2）
+├── restart.sh                  # 重启脚本（chat + manage + web-ui）
 └── pyproject.toml              # Python 依赖
 ```
 
@@ -62,7 +62,7 @@ source .venv/bin/activate && PYTHONPATH=. python chat/main.py
 source .venv/bin/activate && PYTHONPATH=. python manage/main.py
 
 # 前端
-cd web-ui-v2 && npm run dev
+cd web-ui && npm run dev
 
 # 或一键重启
 bash restart.sh
@@ -74,7 +74,7 @@ bash restart.sh
 |---|---|---|
 | users | id, passwd, is_admin, is_active | 内置 admin(is_admin=1)，明文密码 |
 
-| session | id, user_id, name | 按用户隔离 |
+| session | id, user_id, name, agent_id | 按用户隔离，agent_id 对应 data/templates/*.md 的 name |
 | message | id, msg(JSON), session_id, index | agentscope Msg.to_dict() 格式 |
 | message_mark | msg_id, mark | |
 
@@ -92,12 +92,13 @@ bash restart.sh
 | POST /auth/change-password | token | 改自己密码 |
 | POST /auth/logout | 可选token | 删除 token 使其失效 |
 | GET /auth/verify | token | 验证 token 有效性 |
+| GET /agent-templates | token | 列出可用智能体模板（读取 data/templates/*.md 的 YAML frontmatter） |
 | GET /users | admin | 列出所有用户 |
 | POST /users | admin | 创建用户(无密码) |
 | PATCH /users/:id | admin | 修改用户 is_admin/is_active |
 | POST /users/:id/reset-password | admin | 清空密码 |
 | GET /sessions | token | 当前用户的会话(ORDER BY rowid DESC) |
-| POST /sessions | token | 创建会话，可传 {id} |
+| POST /sessions | token | 创建会话，可传 {id, agent_id} |
 | PATCH /sessions/:id | token | 修改会话名称 |
 | DELETE /sessions/:id | token | 删会话(验证归属) |
 | GET /sessions/:id/messages | token | 读历史消息 |
@@ -106,7 +107,7 @@ bash restart.sh
 
 | 端点 | 说明 |
 |---|---|
-| POST /process | {input,session_id,stream} → SSE 流 |
+| POST /process | {input,session_id,stream,agent_id} → SSE 流 |
 | GET /health | {"status":"healthy"} |
 
 ## Agent 对话流程

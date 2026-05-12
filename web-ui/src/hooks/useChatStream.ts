@@ -67,7 +67,7 @@ export function useChatStream(token: string, sessionId: string | null) {
   }, []);
 
   const sendMessage = useCallback(
-    async (text: string, overrideSessionId?: string) => {
+    async (text: string, overrideSessionId?: string, agentId?: string) => {
       const sid = overrideSessionId || sessionId;
       if (!sid || !text.trim()) return;
 
@@ -98,6 +98,7 @@ export function useChatStream(token: string, sessionId: string | null) {
             input: [{ role: "user", content: [{ type: "text", text: text.trim() }] }],
             session_id: sid,
             stream: true,
+            agent_id: agentId,
           }),
           signal: abortController.signal,
         });

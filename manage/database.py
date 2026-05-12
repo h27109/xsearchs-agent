@@ -33,6 +33,7 @@ _INIT_SQL = [
         id VARCHAR(255) NOT NULL,
         user_id VARCHAR(255) NOT NULL,
         name VARCHAR(255) DEFAULT '',
+        agent_id VARCHAR(255) DEFAULT 'simple-react-agent',
         PRIMARY KEY (id),
         FOREIGN KEY(user_id) REFERENCES users (id)
     )""",
@@ -66,6 +67,13 @@ async def init_db() -> None:
     async with aiosqlite.connect(_DB_PATH) as db:
         for sql in _INIT_SQL:
             await db.execute(sql)
+        # Migration: add agent_id column for existing databases
+        try:
+            await db.execute(
+                "ALTER TABLE session ADD COLUMN agent_id VARCHAR(255) DEFAULT 'simple-react-agent'"
+            )
+        except aiosqlite.OperationalError:
+            pass
         await db.execute(
             "INSERT OR IGNORE INTO users (id, is_admin, is_active) "
             "VALUES ('admin', 1, 1)",

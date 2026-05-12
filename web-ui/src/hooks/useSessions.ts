@@ -47,9 +47,9 @@ export function useSessions(token: string) {
     setCurrentId(id);
   }, []);
 
-  const createNewSession = useCallback(async () => {
+  const createNewSession = useCallback(async (agentId?: string) => {
     const id = generateId();
-    const local: SessionInfo = { id, user_id: "", name: "新会话", msg_count: 0 };
+    const local: SessionInfo = { id, user_id: "", name: "新会话", msg_count: 0, agent_id: agentId || "simple-react-agent" };
     setSessions((prev) => [local, ...prev]);
     setPendingIds((prev) => new Set(prev).add(id));
     setCurrentId(id);
@@ -57,10 +57,10 @@ export function useSessions(token: string) {
   }, []);
 
   const persistSession = useCallback(
-    async (id: string, name: string) => {
+    async (id: string, name: string, agentId?: string) => {
       if (!pendingIds.has(id)) return;
       try {
-        await createSession(token, name, id);
+        await createSession(token, name, id, agentId);
         setPendingIds((prev) => {
           const next = new Set(prev);
           next.delete(id);

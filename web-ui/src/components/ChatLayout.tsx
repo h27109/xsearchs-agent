@@ -4,6 +4,8 @@ import { MenuOutlined } from "@ant-design/icons";
 import type { AuthState } from "../api/auth";
 import { logout as apiLogout } from "../api/auth";
 import { useSessions } from "../hooks/useSessions";
+import type { AgentInfo } from "../api/sessions";
+import { getAgentTemplateList } from "../api/sessions";
 import Sidebar from "./Sidebar";
 import ChatArea from "./ChatArea";
 import AdminPanel from "./AdminPanel";
@@ -34,6 +36,11 @@ export default function ChatLayout({ auth, onLogout }: Props) {
   );
   const [adminOpen, setAdminOpen] = useState(false);
   const [pwdOpen, setPwdOpen] = useState(false);
+  const [agents, setAgents] = useState<AgentInfo[]>([]);
+
+  useEffect(() => {
+    getAgentTemplateList(auth.token).then(setAgents).catch(() => {});
+  }, [auth.token]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -48,8 +55,8 @@ export default function ChatLayout({ auth, onLogout }: Props) {
     onLogout();
   }, [auth.token, onLogout]);
 
-  const handleCreate = useCallback(async () => {
-    await createNewSession();
+  const handleCreate = useCallback(async (agentId: string) => {
+    await createNewSession(agentId);
     if (isMobile) setDrawerOpen(false);
   }, [createNewSession, isMobile]);
 
@@ -66,6 +73,7 @@ export default function ChatLayout({ auth, onLogout }: Props) {
       auth={auth}
       sessions={sessions}
       currentId={currentId}
+      agents={agents}
       onSelect={handleSelect}
       onCreate={handleCreate}
       onDelete={deleteSessionById}
@@ -141,9 +149,16 @@ export default function ChatLayout({ auth, onLogout }: Props) {
               token={auth.token}
               sessionId={currentId}
               isPending={currentId ? pendingIds.has(currentId) : false}
+              agentId={
+                currentId
+                  ? sessions.find((s) => s.id === currentId)?.agent_id
+                  : undefined
+              }
               onSessionUsed={selectSession}
-              onCreateSession={createNewSession}
-              onPersistSession={persistSession}
+              onCreateSession={() => createNewSession("simple-react-agent")}
+              onPersistSession={(id, name, agentId) =>
+                persistSession(id, name, agentId || "simple-react-agent")
+              }
             />
           </div>
 

@@ -8,12 +8,13 @@ interface Props {
   token: string;
   sessionId: string | null;
   isPending?: boolean;
+  agentId?: string;
   onSessionUsed?: (id: string) => void;
   onCreateSession?: () => Promise<string | null>;
-  onPersistSession?: (id: string, name: string) => Promise<void>;
+  onPersistSession?: (id: string, name: string, agentId?: string) => Promise<void>;
 }
 
-export default function ChatArea({ token, sessionId, isPending, onSessionUsed, onCreateSession, onPersistSession }: Props) {
+export default function ChatArea({ token, sessionId, isPending, agentId, onSessionUsed, onCreateSession, onPersistSession }: Props) {
   const { messages, isStreaming, sendMessage, stopStreaming, loadHistory, clearMessages } =
     useChatStream(token, sessionId);
 
@@ -51,9 +52,9 @@ export default function ChatArea({ token, sessionId, isPending, onSessionUsed, o
       if (shouldPersist) {
         const name = text.trim().slice(0, 50) || "新会话";
         skipLoadRef.current = true;
-        onPersistSession?.(sid, name);
+        onPersistSession?.(sid, name, agentId);
       }
-      sendMessage(text, sid);
+      sendMessage(text, sid, agentId);
     }
   };
 

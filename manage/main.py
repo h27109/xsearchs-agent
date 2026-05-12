@@ -13,6 +13,7 @@ from manage.database import init_db
 from manage.routes.auth_routes import router as auth_router
 from manage.routes.user_routes import router as user_router
 from manage.routes.session_routes import router as session_router
+from manage.routes.agent_template_routes import router as agent_template_router
 
 
 @asynccontextmanager
@@ -34,6 +35,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(user_router)
 app.include_router(session_router)
+app.include_router(agent_template_router)
 
 
 if __name__ == "__main__":
