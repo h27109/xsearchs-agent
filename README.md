@@ -10,7 +10,7 @@
 | **多 Agent** | 模板驱动的 ReActAgent / DeepResearchAgent，运行时切换 |
 | **可扩展** | MCP 协议工具集成，YAML 配置驱动，模板热加载 |
 | **企业级** | HTTP Basic Auth 认证、管理员管控、数据持久化 |
-| **自动学习** | Mem0 长期记忆 + 向量语义检索，跨会话积累用户知识 |
+| **自动学习** | Holographic 长期记忆（零 Embedding 依赖），跨会话积累用户知识 |
 
 ## 架构
 
@@ -22,7 +22,7 @@ xsearchs-agent/
 │   ├── agent/
 │   │   ├── react_agent_factory.py            # ReActAgent 工厂
 │   │   ├── deep_research_agent_factory.py    # DeepResearchAgent 工厂
-│   │   ├── user_memory.py                    # Mem0 长期记忆
+│   │   ├── user_memory.py                    # 全息长期记忆工厂
 │   │   ├── model_factory.py                  # LLM 模型创建
 │   │   └── deep_research/                    # 深度研究子 Agent 流程
 │   └── session/message_store.py   # SQLite 数据访问层
@@ -40,7 +40,7 @@ xsearchs-agent/
 │   ├── config.yaml               # 模型 / MCP / 长期记忆 配置
 │   ├── .env                      # API Key（不入 git）
 │   ├── templates/                # Agent 模板 (.md)
-│   └── memory/                   # 向量数据库存储（运行时）
+│   └── memory.db                 # SQLite（会话 + 全息记忆）
 ├── restart.sh                    # 一键重启脚本
 └── pyproject.toml                # Python 依赖
 ```
@@ -51,7 +51,6 @@ xsearchs-agent/
 
 - Python >= 3.12
 - Node.js >= 18
-- 可选：本地 Ollama（如需离线 embedding）
 
 ### 1. 配置
 
@@ -59,7 +58,6 @@ xsearchs-agent/
 # data/.env（已加入 .gitignore）
 MINIMAX_API_KEY=sk-xxx
 DEEPSEEK_API_KEY=sk-xxx
-GLM_API_KEY=xxx.xxx
 MCP_CLEAR_TOKEN=xxx
 MCP_CSAS_TOKEN=xxx
 ```
@@ -134,16 +132,15 @@ MCP:
 
 ## 长期记忆（自动学习）
 
-Agent 在对话中自主记录用户偏好、习惯、事实到长期记忆，后续跨会话自动检索。
+Agent 在对话中自主记录用户偏好、习惯、事实到长期记忆，后续跨会话自动检索。基于 **Holographic Reduced Representations (HRR)**，通过 n-gram 随机投影将文本编码为高维向量，无需 Embedding API，零外部依赖。
 
 ```yaml
 memory:
-  enabled: true               # 设为 true 开启
-  model_provider: "deepseek"  # 记忆 LLM，复用模型配置
-  embedding:
-    provider: "glm"           # openai / dashscope / ollama
-    model: "embedding-3"
-    dimensions: 1024
+  enabled: true
+  holographic:
+    dims: 1024       # 向量维度
+    ngram_min: 2     # n-gram 最小长度
+    ngram_max: 4     # n-gram 最大长度
 ```
 
 工作流程：
@@ -156,20 +153,22 @@ memory:
 
 | 特性 | 实现 |
 |------|------|
-| 记忆后端 | Mem0 + Qdrant 本地向量库 |
-| 向量化 | GLM Embedding-3（默认 1024 维） |
-| 用户隔离 | 按 user_id 过滤元数据，跨会话共享 |
-| 存储路径 | `data/memory/qdrant/`，随 `XSEARCHS_USER_DATA` 切换 |
+| 记忆后端 | Holographic HRR（n-gram 随机投影） |
+| 编码方式 | 确定性随机向量叠加（中文字符级 n-gram） |
+| 存储 | SQLite（`holographic_memory` 表） |
+| 用户隔离 | 按 user_id 过滤，跨会话共享 |
+| 全息迹 | 所有记忆叠加为单一迹向量 |
 | 触发模式 | `agent_control`：Agent 自主决定读写时机 |
 
-支持的 embedding provider：
+### 原理
 
-| Provider | 配置 |
-|----------|------|
-| `glm` | 智谱 Embedding-3（默认） |
-| `openai` | 任意 OpenAI 兼容 API |
-| `dashscope` | 阿里云 DashScope |
-| `ollama` | 本地 Ollama（免费、离线） |
+```
+文本 → n-gram 切分 → 每个 n-gram hash → 确定性随机向量
+    → 向量叠加 → 归一化 → 1024 维编码向量
+
+检索时：查询编码 → 与所有存储向量求余弦相似度 → 排序返回
+全息迹：所有记忆向量累加 → 单向量代表全部记忆（Holographic 特性）
+```
 
 ## API 参考
 
@@ -217,6 +216,7 @@ SQLite，位于 `data/memory.db`：
 | `session` | 会话（id, user_id, name, agent_id） |
 | `message` | 消息（id, msg JSON, session_id, index） |
 | `message_mark` | 消息标记（压缩等） |
+| `holographic_memory` | 全息长期记忆（id, user_id, content, vector_json, created_at） |
 | — | HTTP Basic Auth，无需令牌表 |
 
 ## 环境变量
@@ -226,7 +226,6 @@ SQLite，位于 `data/memory.db`：
 | `XSEARCHS_USER_DATA` | 用户数据目录，默认 `./data` |
 | `MINIMAX_API_KEY` | MiniMax API Key |
 | `DEEPSEEK_API_KEY` | DeepSeek API Key |
-| `GLM_API_KEY` | 智谱 API Key（embedding） |
 | `MCP_CLEAR_TOKEN` | 清算 MCP Bearer Token |
 | `MCP_CSAS_TOKEN` | 商户 MCP Bearer Token |
 
@@ -236,8 +235,7 @@ SQLite，位于 `data/memory.db`：
 |----|------|
 | Agent 框架 | AgentScope 1.0 + agentscope-runtime |
 | LLM | DeepSeek V4, MiniMax M2.5/M2.7 |
-| Embedding | 智谱 Embedding-3（支持 OpenAI/DashScope/Ollama） |
-| 向量数据库 | Qdrant（本地模式） |
+| 长期记忆 | Holographic HRR（n-gram 随机投影，零 Embedding 依赖） |
 | 后端 | FastAPI（管理端）+ AgentApp（对话端） |
 | 前端 | Vite 8 + React 19 + TypeScript + Ant Design 5 |
 | 数据库 | SQLite（aiosqlite + SQLAlchemy） |

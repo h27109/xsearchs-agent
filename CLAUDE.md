@@ -4,27 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目定位
 
-面向企业的多用户、多 Agent、可扩展 AI 对话系统。核心能力：多 Agent 模板切换、MCP 支付清算工具集成、Mem0 长期记忆（自动学习）、Web UI。
+面向企业的多用户、多 Agent、可扩展 AI 对话系统。核心能力：多 Agent 模板切换、MCP 支付清算工具集成、Holographic 长期记忆（零 Embedding 依赖）、Web UI。
 
 ## Architecture
 
 ```
 xsearchs_agent/
 ├── data/                       # 用户数据（运行时产生/可编辑，与 agent 代码分离）
-│   ├── config.yaml             # 模型(DeepSeek/MiniMax)、MCP 服务器、长期记忆配置
+│   ├── config.yaml             # 模型(DeepSeek/MiniMax)、MCP 服务器、全息记忆配置
 │   ├── templates/              # Agent 模板(.md)，manage 可编缉，agent 只读
 │   │   ├── simple-react-agent.md
 │   │   ├── payment-system-architect.md
 │   │   └── deep-research-agent.md
-│   ├── memory.db               # SQLite（两后端共享）
-│   └── memory/                 # Mem0 向量数据库存储（运行时）
+│   └── memory.db               # SQLite（会话 + 全息记忆，两后端共享）
 ├── chat/                       # 对话后端 :8090 — Agent 推理 + SSE 流式响应（只读 data/）
 │   ├── main.py                 # AgentApp 入口，/process 端点，ensure_session()，agent 路由
-│   ├── config.py               # AppConfig / ModelConfig / MemoryConfig / MemoryEmbeddingConfig
+│   ├── config.py               # AppConfig / ModelConfig / MemoryConfig / HolographicConfig
 │   ├── agent/                  # Agent 工厂
 │   │   ├── react_agent_factory.py      # ReActAgent + 长期记忆集成
 │   │   ├── deep_research_agent_factory.py  # DeepResearchAgent 工厂
-│   │   ├── user_memory.py              # Mem0LongTermMemory 创建（GLM Embedding-3）
+│   │   ├── user_memory.py              # HolographicLongTermMemory 工厂
+│   │   ├── holographic_memory.py       # 全息记忆实现（n-gram 随机投影 + SQLite）
 │   │   ├── model_factory.py            # LLM 模型创建（AnthropicChatModel / OpenAIChatModel）
 │   │   └── deep_research/              # DeepResearchAgent 提示词和工具
 │   └── session/                # 数据访问层
@@ -72,6 +72,7 @@ cd web-ui && npm run dev                                           # 前端 :517
 | session | id, user_id, name, agent_id | 按用户隔离，agent_id 对应 data/templates/*.md 的 name |
 | message | id, msg(JSON), session_id, index | agentscope Msg.to_dict() 格式 |
 | message_mark | msg_id, mark | 消息标记（压缩等） |
+| holographic_memory | id, user_id, content, vector_json(JSON), created_at | 全息长期记忆，按用户隔离 |
 
 `manage/database.py` 的 `init_db()` 执行建表 + `INSERT OR IGNORE admin`，仅 manage 后端在启动时调用。
 `chat/session/message_store.py` 的 `get_db()` 提供 chat 后端的连接，两后端各自管理自己的 DB 访问。
@@ -109,36 +110,47 @@ cd web-ui && npm run dev                                           # 前端 :517
 1. POST /process → `query_func` → 根据 agent_id 路由
 2. agent_id == "deep-research-agent" → `load_deep_research_agent()`，其余 → `load_react_agent()`
 3. `ensure_session()` 自动创建 session 行（如不存在）
-4. 如 memory 启用，`create_long_term_memory()` 创建 Mem0 + GLM embedding + Qdrant
+4. 如 memory 启用，`create_long_term_memory()` 创建 HolographicLongTermMemory（n-gram 随机投影 + SQLite）
 5. `AsyncSQLAlchemyMemory` 从 SQLite 加载历史
 6. ReActAgent 推理(DeepSeek/MiniMax)，需要时调用 MCP 工具
 7. agent_control 模式下 Agent 自主调用 record_to_memory / retrieve_from_memory
 8. SSE 流式返回，消息自动持久化到 message 表
 
-## 长期记忆 (Mem0)
+## 长期记忆 (Holographic)
 
-通过 `create_long_term_memory()` 创建 `Mem0LongTermMemory`，配置从 `data/config.yaml` 的 `memory` 段读取。
+通过 `create_long_term_memory()` 创建 `HolographicLongTermMemory`，配置从 `data/config.yaml` 的 `memory` 段读取。
 
-- **LLM 模型**: `_create_memory_model()` 强制 `stream=False`，复用 models 段配置
-- **Embedding**: GLM Embedding-3 默认（OpenAI 兼容协议），支持 openai/dashscope/ollama
-- **向量存储**: Qdrant 本地模式，路径 `data/memory/qdrant/`，需显式设 `embedding_model_dims`（默认 1536 会导致维度不匹配）
-- **用户隔离**: `agent_name=user_id, user_name=user_id`，不设 `run_name`，实现跨会话记忆
-- **触发模式**: `agent_control`，Agent 自主决定何时读写记忆
-- **版本约束**: mem0ai 必须 `<2.0.0`（agentscope 1.0.19 不兼容 2.0.x 的 search API）
+- **编码方式**: n-gram 随机投影，每个 n-gram hash 映射为确定性随机单位向量，叠加后归一化
+- **存储**: SQLite 表 `holographic_memory`，向量序列化为 JSON，按 user_id 隔离
+- **全息迹**: 所有记忆向量累加为单一 `_trace` 向量（Holographic 特性），启动时从 DB 重建
+- **检索**: 查询编码后与所有存储向量求余弦相似度，排序返回 top-k
+- **触发模式**: `agent_control`，Agent 自主调用 `record_to_memory` / `retrieve_from_memory`
+- **零外部依赖**: 不需要 Embedding API，不需要 Qdrant，仅依赖 numpy + sqlite3
+
+### 配置
+
+```yaml
+memory:
+  enabled: true
+  holographic:
+    dims: 1024       # 向量维度（越大精度越高，存储开销越大）
+    ngram_min: 2     # n-gram 最小长度
+    ngram_max: 4     # n-gram 最大长度
+```
 
 ## Key Pitfalls
 
-1. **data/ 目录是用户数据与代码的边界**：config.yaml、templates/、memory.db、memory/ 都在 data/ 下。chat/ 中的代码只读取它们，不修改。manage 可提供编缉模板的能力。
+1. **data/ 目录是用户数据与代码的边界**：config.yaml、templates/、memory.db 都在 data/ 下。chat/ 中的代码只读取它们，不修改。manage 可提供编缉模板的能力。
 2. **chat/ 和 manage/ 是两个独立项目**，不共用代码模块，各自管理自己的 DB 连接和配置读取
 3. **antd 必须 v5**，v6 与 @agentscope-ai/chat 不兼容
 4. **前端 API 用相对路径**（/api/manage, /api/chat），通过 Vite proxy 转发
 5. **消息历史格式**: 存储为 agentscope ContentBlock 数组，前端 `flattenContent()` 转 Markdown 展示
 6. **DeepSeek 两种端点都严格校验 MCP tool schema**，`_fix_schema_for_deepseek()` 递归修补 JSON Schema 兼容性
 7. **模板 frontmatter 必须有 `provider` 字段**，否则 `react_agent_factory.py` 抛 ValueError
-8. **Mem0 的 LLM 模型必须 stream=False**，否则 mem0 内部会报 `'async_generator' object has no attribute 'content'`
-9. **Mem0 VectorStoreConfig 默认 embedding_model_dims=1536**，使用非 1536 维 embedding 时必须显式设置，否则 Qdrant 写入失败
-10. **mem0ai 版本必须 <2.0.0**，2.0.x 的 search() API 与 agentscope 1.0.19 不兼容
-11. **Qdrant 本地模式不支持并发访问同一存储路径**，生产环境建议使用 Qdrant 服务端模式
+8. **全息记忆 dims 变更**：修改 dims 后，旧记忆的向量维度不匹配，检索时会因 numpy shape 不匹配报错。如需变更维度，需清空 `holographic_memory` 表
+9. **n-gram 编码精度**：对同义词/语义改写检索效果弱于 Embedding 方案，建议 Agent 记录记忆时使用具体关键词（人名、日期、项目名等）
+10. **同步 sqlite3**：HolographicLongTermMemory 使用同步 sqlite3 + `asyncio.to_thread`，与 chat 后端的 aiosqlite（SQLAlchemy）通过 WAL 模式共存，不会互相阻塞
+11. **deep_research_agent 不使用长记忆**，仅 `react_agent_factory` 集成
 12. **.env 已加入 .gitignore**，不要提交 API Key
 
 ## 添加新 Agent 模板
@@ -160,17 +172,11 @@ mcp:                      # 引用的 MCP 服务器
 系统提示词正文...
 ```
 
-## 添加新 Embedding Provider
+## 调整全息记忆编码参数
 
-在 `chat/agent/user_memory.py` 的 `_EMBEDDING_FACTORIES` 中添加：
+修改 `data/config.yaml` 的 `memory.holographic` 段：
 
-```python
-"新provider名": lambda cfg: OpenAITextEmbedding(
-    model_name=cfg.model,
-    api_key=cfg.api_key,
-    dimensions=cfg.dimensions,
-    base_url=cfg.base_url or "默认base_url",
-),
-```
+- **dims**: 提高到 2048 可增加精度（更多随机投影基），降低到 512 减少存储和计算开销
+- **ngram_min/ngram_max**: 对中文建议 2-4，对英文可调整为 3-5
 
-并在 `data/config.yaml` 的 `memory.embedding.provider` 中引用。
+注意：修改 dims 需要清空 `holographic_memory` 表，否则旧向量维度不匹配。

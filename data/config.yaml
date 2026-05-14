@@ -28,12 +28,10 @@ sqlite:
 
 memory:
   enabled: false
-  model_provider: "deepseek"
-  embedding:
-    provider: "glm"
-    model: "embedding-3"
-    api_key: ${GLM_API_KEY}
-    dimensions: 1024
+  holographic:
+    dims: 1024
+    ngram_min: 2
+    ngram_max: 4
 
 MCP:
   mcp-clear:

@@ -74,19 +74,16 @@ class ModelConfig:
 
 
 @dataclass(frozen=True)
-class MemoryEmbeddingConfig:
-    provider: str = ""
-    model: str = ""
-    api_key: str = ""
-    base_url: str = ""
-    dimensions: int = 1024
+class HolographicConfig:
+    dims: int = 1024
+    ngram_min: int = 2
+    ngram_max: int = 4
 
 
 @dataclass(frozen=True)
 class MemoryConfig:
     enabled: bool = False
-    model_provider: str = ""
-    embedding: MemoryEmbeddingConfig = field(default_factory=MemoryEmbeddingConfig)
+    holographic: HolographicConfig = field(default_factory=HolographicConfig)
 
 
 @dataclass(frozen=True)
@@ -144,16 +141,13 @@ def load_config() -> AppConfig:
     sqlite_url = f"sqlite+aiosqlite:///{data_dir / db_name}"
 
     raw_memory = raw.get("memory") or {}
-    raw_embedding = raw_memory.get("embedding") or {}
+    raw_holographic = raw_memory.get("holographic") or {}
     memory_config = MemoryConfig(
         enabled=raw_memory.get("enabled", False),
-        model_provider=raw_memory.get("model_provider", ""),
-        embedding=MemoryEmbeddingConfig(
-            provider=raw_embedding.get("provider", ""),
-            model=raw_embedding.get("model", ""),
-            api_key=raw_embedding.get("api_key", ""),
-            base_url=raw_embedding.get("base_url", ""),
-            dimensions=raw_embedding.get("dimensions", 1024),
+        holographic=HolographicConfig(
+            dims=raw_holographic.get("dims", 1024),
+            ngram_min=raw_holographic.get("ngram_min", 2),
+            ngram_max=raw_holographic.get("ngram_max", 4),
         ),
     )
 
