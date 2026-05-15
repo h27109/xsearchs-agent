@@ -33,6 +33,10 @@ memory:
     ngram_min: 2
     ngram_max: 4
 
+generate_agent:
+  provider: deepseek
+  model: deepseek-v4-pro
+
 MCP:
   mcp-clear:
     url: "https://ai.xsearchs.com/mcp-clear/mcp"

@@ -9,6 +9,7 @@ import {
   KeyOutlined,
   TeamOutlined,
   MessageOutlined,
+  AppstoreOutlined,
 } from "@ant-design/icons";
 import type { SessionInfo, AgentInfo } from "../api/sessions";
 import type { AuthState } from "../api/auth";
@@ -32,6 +33,7 @@ interface Props {
   onRename: (id: string, name: string) => void;
   onLogout: () => void;
   onAdmin: () => void;
+  onTemplateManager: () => void;
   onChangePassword: () => void;
 }
 
@@ -46,6 +48,7 @@ export default function Sidebar({
   onRename,
   onLogout,
   onAdmin,
+  onTemplateManager,
   onChangePassword,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -92,6 +95,12 @@ export default function Sidebar({
     },
     ...(auth.is_admin
       ? [
+          {
+            key: "templates",
+            icon: <AppstoreOutlined />,
+            label: "模板管理",
+            onClick: onTemplateManager,
+          },
           {
             key: "admin",
             icon: <TeamOutlined />,

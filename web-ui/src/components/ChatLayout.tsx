@@ -13,11 +13,12 @@ import ChangePasswordModal from "./ChangePasswordModal";
 interface Props {
   auth: AuthState;
   onLogout: () => void;
+  onOpenTemplates: () => void;
 }
 
 const MOBILE_BREAKPOINT = 768;
 
-export default function ChatLayout({ auth, onLogout }: Props) {
+export default function ChatLayout({ auth, onLogout, onOpenTemplates }: Props) {
   const {
     sessions,
     currentId,
@@ -79,6 +80,10 @@ export default function ChatLayout({ auth, onLogout }: Props) {
       onLogout={handleLogout}
       onAdmin={() => {
         setAdminOpen(true);
+        if (isMobile) setDrawerOpen(false);
+      }}
+      onTemplateManager={() => {
+        onOpenTemplates();
         if (isMobile) setDrawerOpen(false);
       }}
       onChangePassword={() => {

@@ -1,14 +1,16 @@
 import ChatLayout from "./components/ChatLayout";
 import LoginPage from "./components/LoginPage";
 import SetPasswordPage from "./components/SetPasswordPage";
+import TemplateManager from "./components/TemplateManager";
 import { useState, useEffect } from "react";
-import { getAuth, clearAuth, verifyToken, setAuth, AuthState } from "./api/auth";
+import { getAuth, clearAuth, verifyAuth, setAuth, AuthState } from "./api/auth";
 
 type PageState =
   | { stage: "loading" }
   | { stage: "login" }
   | { stage: "set_password"; userId: string }
-  | { stage: "chat"; auth: AuthState };
+  | { stage: "chat"; auth: AuthState }
+  | { stage: "templates"; auth: AuthState };
 
 function App() {
   const [page, setPage] = useState<PageState>({ stage: "loading" });
@@ -48,6 +50,13 @@ function App() {
         onSuccess={(auth) => setPage({ stage: "chat", auth })}
       />
     );
+  if (page.stage === "templates")
+    return (
+      <TemplateManager
+        onBack={() => setPage({ stage: "chat", auth: page.auth })}
+        onTemplatesChanged={() => {}}
+      />
+    );
   return (
     <ChatLayout
       auth={page.auth}
@@ -55,6 +64,7 @@ function App() {
         clearAuth();
         setPage({ stage: "login" });
       }}
+      onOpenTemplates={() => setPage({ stage: "templates", auth: page.auth })}
     />
   );
 }
