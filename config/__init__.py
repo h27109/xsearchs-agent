@@ -1,3 +1,5 @@
+"""共享配置模块，chat/ 和 manage/ 共用。"""
+
 from __future__ import annotations
 
 import os
@@ -9,6 +11,12 @@ import yaml
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
+_env_map: dict[str, str] = {}
+
+
+# =============================================================================
+# 基础工具
+# =============================================================================
 
 def get_data_dir() -> Path:
     env = os.environ.get("XSEARCHS_USER_DATA")
@@ -18,7 +26,6 @@ def get_data_dir() -> Path:
 
 
 def _load_env(data_dir: Path) -> dict[str, str]:
-    """从用户数据目录读取 .env 文件为 key=value 字典。"""
     env_path = data_dir / ".env"
     env_vars: dict[str, str] = {}
     if not env_path.exists():
@@ -36,7 +43,6 @@ def _load_env(data_dir: Path) -> dict[str, str]:
 
 
 def _resolve_env_vars(obj):
-    """递归遍历 dict/list/str，将 ${VAR} 占位符替换为 .env 中的值。"""
     if isinstance(obj, str):
         return re.sub(
             r"\$\{(\w+)\}",
@@ -50,11 +56,23 @@ def _resolve_env_vars(obj):
     return obj
 
 
-# 模块级变量，load_config() 时填充
-_env_map: dict[str, str] = {}
+def load_raw_config() -> dict:
+    """加载 config.yaml 并解析 ${VAR} 占位符为 .env 中的值。"""
+    global _env_map
+    data_dir = get_data_dir()
+    _env_map = _load_env(data_dir)
 
-_CONFIG_PATH = get_data_dir() / "config.yaml"
+    config_path = data_dir / "config.yaml"
+    if not config_path.exists():
+        return {}
+    with open(config_path) as f:
+        raw = yaml.safe_load(f)
+    return _resolve_env_vars(raw) or {}
 
+
+# =============================================================================
+# 配置数据模型
+# =============================================================================
 
 @dataclass(frozen=True)
 class ModelConfig:
@@ -94,6 +112,10 @@ class AppConfig:
     memory: MemoryConfig = field(default_factory=MemoryConfig)
 
 
+# =============================================================================
+# 配置加载
+# =============================================================================
+
 def _parse_model_config(provider_name: str, cfg: dict) -> ModelConfig:
     required = ("client_type", "formatter", "api_key", "model", "base_url", "max_iters")
     missing = [f for f in required if f not in cfg]
@@ -117,17 +139,9 @@ def _parse_model_config(provider_name: str, cfg: dict) -> ModelConfig:
 
 
 def load_config() -> AppConfig:
-    global _env_map
-
     data_dir = get_data_dir()
 
-    # 1. 加载 .env
-    _env_map = _load_env(data_dir)
-
-    # 2. 加载 config.yaml 并替换 ${VAR}
-    with open(data_dir / "config.yaml") as f:
-        raw = yaml.safe_load(f)
-    raw = _resolve_env_vars(raw)
+    raw = load_raw_config()
 
     raw_models = raw.get("models")
     if not isinstance(raw_models, dict):

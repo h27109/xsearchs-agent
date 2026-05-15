@@ -1,5 +1,5 @@
 from __future__ import annotations
-from chat.config import get_data_dir
+from config import get_data_dir
 
 import aiosqlite
 

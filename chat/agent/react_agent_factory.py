@@ -16,7 +16,7 @@ from agentscope.tool import (
     view_text_file,
 )
 
-from chat.config import AppConfig, get_data_dir
+from config import AppConfig, get_data_dir
 from chat.agent.model_factory import create_formatter, create_model
 from chat.agent.user_memory import create_long_term_memory
 
@@ -77,6 +77,45 @@ def _fix_schema_for_deepseek(schema: dict | list) -> dict | list:
             if isinstance(item, dict):
                 _fix_schema_for_deepseek(item)
     return schema
+
+
+def _patch_formatter_for_deepseek(formatter: Any) -> None:
+    """Patch AnthropicChatFormatter to merge consecutive tool_result messages.
+
+    Anthropic API requires all tool_result blocks in a single user message,
+    but agentscope's AnthropicChatFormatter puts each tool_result in its own
+    user message. This breaks when DeepSeek returns multiple parallel tool_use.
+    """
+    original_format = formatter.format
+
+    async def patched_format(msgs: Any) -> list[dict]:
+        messages = await original_format(msgs)
+        merged: list[dict] = []
+        for msg in messages:
+            is_tool_result_msg = (
+                msg.get("role") == "user"
+                and isinstance(msg.get("content"), list)
+                and all(
+                    isinstance(b, dict) and b.get("type") == "tool_result"
+                    for b in msg["content"]
+                )
+            )
+            if (
+                is_tool_result_msg
+                and merged
+                and merged[-1].get("role") == "user"
+                and isinstance(merged[-1].get("content"), list)
+                and all(
+                    isinstance(b, dict) and b.get("type") == "tool_result"
+                    for b in merged[-1]["content"]
+                )
+            ):
+                merged[-1]["content"].extend(msg["content"])
+            else:
+                merged.append(msg)
+        return merged
+
+    formatter.format = patched_format
 
 
 async def _build_toolkit(meta: dict, mcp_config: dict, *, fix_deepseek: bool = False) -> Toolkit:
@@ -159,5 +198,7 @@ async def load_react_agent(
             session_id=session_id,
         ),
     )
+    if provider_name == "deepseek":
+        _patch_formatter_for_deepseek(agent.formatter)
     agent.set_console_output_enabled(enabled=True)
     return agent

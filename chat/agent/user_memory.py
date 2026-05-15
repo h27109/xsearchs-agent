@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from chat.agent.holographic_memory import HolographicLongTermMemory
-from chat.config import AppConfig, get_data_dir
+from config import AppConfig, get_data_dir
 
 
 def create_long_term_memory(

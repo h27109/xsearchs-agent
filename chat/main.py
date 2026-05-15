@@ -7,7 +7,7 @@ from agentscope.session import RedisSession
 from agentscope_runtime.engine import AgentApp
 from agentscope_runtime.engine.schemas.agent_schemas import AgentRequest
 
-from chat.config import load_config
+from config import load_config
 from chat.agent.react_agent_factory import load_react_agent
 from chat.agent.deep_research_agent_factory import load_deep_research_agent
 from chat.session import get_db

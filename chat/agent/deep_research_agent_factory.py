@@ -12,7 +12,7 @@ from agentscope.tool import (
     write_text_file,
 )
 
-from chat.config import AppConfig, get_data_dir
+from config import AppConfig, get_data_dir
 from chat.agent.model_factory import create_formatter, create_model
 from chat.agent.react_agent_factory import _fix_schema_for_deepseek, _parse_template
 from chat.agent.deep_research.deep_research_agent import DeepResearchAgent
