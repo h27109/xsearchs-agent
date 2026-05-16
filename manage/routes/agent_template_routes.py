@@ -139,6 +139,13 @@ def _extract_text_from_event(event: dict) -> str | None:
     return None
 
 
+def _extract_thinking_from_event(event: dict) -> str | None:
+    """从单个 SSE 事件中提取 thinking delta。"""
+    if event.get("object") == "content" and event.get("type") == "thinking":
+        return event.get("thinking") or event.get("text") or ""
+    return None
+
+
 def _extract_final_text(events: list[dict]) -> str:
     """从 completed 事件中提取完整文本。"""
     for event in events:
