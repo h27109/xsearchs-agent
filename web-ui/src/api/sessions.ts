@@ -177,7 +177,7 @@ export async function deleteTemplate(
   return resp.json();
 }
 
-export type GenerateEventType = "delta" | "completed" | "error";
+export type GenerateEventType = "delta" | "thinking" | "completed" | "error";
 
 export interface GenerateStreamEvent {
   event: GenerateEventType;

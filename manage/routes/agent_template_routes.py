@@ -198,7 +198,7 @@ async def _stream_agent_generator(
         "agent_id": "agent-generator",
     }
 
-    accumulated_events: list[dict] = []
+    text_events: list[dict] = []
 
     try:
         async with httpx.AsyncClient(timeout=120.0) as client:
@@ -214,18 +214,21 @@ async def _stream_agent_generator(
                         return
 
                     text = _extract_text_from_event(event)
+                    thinking = _extract_thinking_from_event(event)
                     if text is not None:
-                        accumulated_events.append(event)
+                        text_events.append(event)
                         yield f"event: delta\ndata: {json.dumps({'text': text}, ensure_ascii=False)}\n\n"
+                    elif thinking is not None:
+                        yield f"event: thinking\ndata: {json.dumps({'thinking': thinking}, ensure_ascii=False)}\n\n"
                     elif event.get("object") == "response" and event.get("status") == "completed":
-                        accumulated_events.append(event)
+                        text_events.append(event)
 
         # 流结束，提取完整文本并解析模板
-        full_text = _extract_final_text(accumulated_events)
+        full_text = _extract_final_text(text_events)
         if not full_text:
             # fallback: 拼接 delta
             full_text = "".join(
-                _extract_text_from_event(e) or "" for e in accumulated_events
+                _extract_text_from_event(e) or "" for e in text_events
             )
 
         if not full_text:

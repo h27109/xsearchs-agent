@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 from pathlib import Path
 from typing import Any
 
@@ -172,6 +173,10 @@ async def load_react_agent(
     model_name = meta.get("model")
     if isinstance(model_name, list):
         model_name = model_name[0]
+
+    # 模板 frontmatter 可覆盖 provider 级别的 enable_thinking
+    if "enable_thinking" in meta:
+        mc = dataclasses.replace(mc, enable_thinking=bool(meta["enable_thinking"]))
 
     model = create_model(mc, model_name)
     formatter = create_formatter(mc)

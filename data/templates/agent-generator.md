@@ -3,6 +3,7 @@ name: agent-generator
 description: AI Agent 模板生成器，根据自然语言需求自动设计并输出完整的 agent 配置
 provider: deepseek
 model: deepseek-v4-pro
+enable_thinking: false
 color: purple
 tools:
   - execute_python_code
