@@ -135,7 +135,7 @@ def _parse_sse_line(line: str) -> dict | None:
 def _extract_text_from_event(event: dict) -> str | None:
     """从单个 SSE 事件中提取文本 delta。"""
     if event.get("object") == "content" and event.get("type") == "text":
-        return event.get("delta") or event.get("text") or ""
+        return event.get("text") or ""
     return None
 
 
