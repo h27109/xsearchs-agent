@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from manage.database import init_db
+from manage.nacos_client import fetch_agent_templates, start_nacos_watcher
 from manage.routes.auth_routes import router as auth_router
 from manage.routes.user_routes import router as user_router
 from manage.routes.session_routes import router as session_router
@@ -19,6 +20,8 @@ from manage.routes.agent_template_routes import router as agent_template_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await fetch_agent_templates()
+    start_nacos_watcher()
     yield
 
 

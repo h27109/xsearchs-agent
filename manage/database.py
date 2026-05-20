@@ -8,14 +8,14 @@ import aiosqlite
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
-def _get_data_dir() -> Path:
+def get_data_dir() -> Path:
     env = os.environ.get("XSEARCHS_USER_DATA")
     if env:
         return Path(env)
     return _PROJECT_ROOT / "data"
 
 
-_DB_PATH = str(_get_data_dir() / "memory.db")
+_DB_PATH = str(get_data_dir() / "memory.db")
 
 
 def get_db() -> aiosqlite.Connection:
@@ -56,7 +56,7 @@ _INIT_SQL = [
 
 
 async def init_db() -> None:
-    os.makedirs(str(_get_data_dir()), exist_ok=True)
+    os.makedirs(str(get_data_dir()), exist_ok=True)
     async with aiosqlite.connect(_DB_PATH) as db:
         for sql in _INIT_SQL:
             await db.execute(sql)
